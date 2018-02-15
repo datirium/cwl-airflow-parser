@@ -252,6 +252,9 @@ class CWLDAG(DAG):
 
         if self.top_task and self.bottom_task:
             self.bottom_task.reader_task_id = self.top_task.task_id
+            for t in self.tasks:
+                if t.task_id != self.top_task.task_id:
+                    t.reader_task_id = self.top_task.task_id
 
     def get_output_list(self):
         outputs = {

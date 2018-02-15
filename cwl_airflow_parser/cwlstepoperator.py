@@ -54,16 +54,20 @@ class CWLStepOperator(BaseOperator):
             self,
             cwl_step,
             task_id=None,
+            reader_task_id=None,
             ui_color=None,
             *args, **kwargs):
 
         self.outdir = None
         self.cwl_step = cwl_step
+        self.reader_task_id = None
 
         super(self.__class__, self). \
             __init__(
             task_id=task_id if task_id else shortname(cwl_step.tool["id"]).split("/")[-1],
             *args, **kwargs)
+
+        self.reader_task_id = reader_task_id if reader_task_id else self.reader_task_id
 
         if ui_color:
             self.ui_color = ui_color
@@ -74,7 +78,8 @@ class CWLStepOperator(BaseOperator):
         _logger.debug('{0}: Running tool: \n{1}'.format(self.task_id,
                                                         json.dumps(self.cwl_step.embedded_tool.tool, indent=4)))
 
-        upstream_task_ids = [t.task_id for t in self.upstream_list]
+        upstream_task_ids = [t.task_id for t in self.upstream_list] + \
+                            ([self.reader_task_id] if self.reader_task_id else [])
         _logger.debug('{0}: Collecting outputs from: \n{1}'.format(self.task_id,
                                                                    json.dumps(upstream_task_ids, indent=4)))
 
