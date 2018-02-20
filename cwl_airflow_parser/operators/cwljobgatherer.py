@@ -18,7 +18,7 @@
  limitations under the License.
 
 
- CWL Job Finalize mimic cwltool bihaviour
+ CWL Job Finalize mimics cwltool bihaviour
 
  ****************************************************************************"""
 
@@ -59,7 +59,7 @@ class CWLJobGatherer(BaseOperator):
         self.reader_task_id = None
         self.reader_task_id = reader_task_id if reader_task_id else self.reader_task_id
 
-    def cwl_finalize(self, context):
+    def cwl_gather(self, context):
         upstream_task_ids = [t.task_id for t in self.dag.tasks if isinstance(t, CWLStepOperator)] + \
                             ([self.reader_task_id] if self.reader_task_id else [])
         upstream_data = self.xcom_pull(context=context, task_ids=upstream_task_ids)
@@ -104,4 +104,4 @@ class CWLJobGatherer(BaseOperator):
         return _job_result
 
     def execute(self, context):
-        return self.cwl_finalize(context)
+        return self.cwl_gather(context)

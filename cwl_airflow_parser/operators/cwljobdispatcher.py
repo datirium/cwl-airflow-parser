@@ -18,7 +18,7 @@
  limitations under the License.
 
 
- CWL JobReader mimic cwltool behaviour
+ CWL JobReader mimics cwltool behaviour
 
  ****************************************************************************"""
 
@@ -58,7 +58,7 @@ class CWLJobDispatcher(BaseOperator):
         self.tmp_folder = tmp_folder if tmp_folder else self.dag.default_args['tmp_folder']
         if ui_color: self.ui_color = ui_color
 
-    def cwl_begin(self, json):
+    def cwl_dispatch(self, json):
         try:
             cwl_context = {
                 "outdir": mkdtemp(
@@ -100,7 +100,7 @@ class CWLJobDispatcher(BaseOperator):
                 '{0}: dag_run conf: \n {1}'.format(self.task_id, context['dag_run'].conf['job']))
             _json = context['dag_run'].conf['job']
 
-        cwl_context = self.cwl_begin(_json)
+        cwl_context = self.cwl_dispatch(_json)
         if cwl_context:
             return cwl_context
         else:
