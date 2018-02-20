@@ -148,7 +148,7 @@ class CWLDAG(DAG):
             'print_dot': False,
             'relative_deps': False,
             'use_container': True,
-            "rm_container": True,
+            'rm_container': True,
             'enable_pull': True,
             'preserve_environment': ["PATH"],
             'preserve_entire_environment': False,

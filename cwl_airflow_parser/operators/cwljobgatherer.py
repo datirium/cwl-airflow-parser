@@ -87,7 +87,9 @@ class CWLJobGatherer(BaseOperator):
                              dumps(self.outputs, indent=4),
                              dumps(_move_job, indent=4)))
 
-        _files_moved = relocateOutputs(_move_job, self.output_folder, [self.outdir], "move", StdFsAccess(""))
+        _files_moved = relocateOutputs(_move_job, self.output_folder,
+                                       [self.outdir], self.dag.default_args["move_outputs"],
+                                       StdFsAccess(""))
         _job_result = {val.split("/")[-1]: _files_moved[out]  # TODO: is split required?
                        for out, val in self.outputs.items()
                        if out in _files_moved
@@ -101,7 +103,7 @@ class CWLJobGatherer(BaseOperator):
             pass
         _logger.info("Job done: {}".format(dumps(_job_result, indent=4)))
 
-        return _job_result
+        return _job_result, promises
 
     def execute(self, context):
         return self.cwl_gather(context)
