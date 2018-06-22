@@ -67,9 +67,14 @@ setup(
     # license='Apache-2.0',
     packages=find_packages(),
     install_requires=[
-        'cwltool',
+        'setuptools',
+        'cryptography',
+        'cwltool == 1.0.20180220121300',
         'jsonmerge',
-        'apache-airflow >= 1.9.0, < 2'
+        'ruamel.yaml < 0.15',
+        'sqlparse',
+        'apache-airflow >= 1.9.0, < 2',
+        'apache-airflow[mysql]'
     ],
     zip_safe=False,
     cmdclass={'egg_info': tagger},
