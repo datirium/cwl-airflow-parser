@@ -34,7 +34,7 @@ from datetime import datetime
 from six.moves import urllib
 
 import schema_salad.schema
-from cwltool.workflow import defaultMakeTool
+from cwltool.workflow import default_make_tool
 from cwltool.errors import UnsupportedRequirement
 from cwltool.resolver import tool_resolver
 
@@ -186,7 +186,7 @@ class CWLDAG(DAG):
 
     def create(self):
         self.cwlwf = load_tool(argsworkflow=self.cwl_workflow,
-                               makeTool=defaultMakeTool,
+                               makeTool=default_make_tool,
                                resolver=tool_resolver,
                                kwargs=self.default_args,
                                strict=self.default_args['strict'])
@@ -201,7 +201,7 @@ class CWLDAG(DAG):
             with open(new_workflow_name, 'w') as generated_workflow_stream:
                 generated_workflow_stream.write(json.dumps(generated_workflow, indent=4))
             self.cwlwf = load_tool(argsworkflow=new_workflow_name,
-                                   makeTool=defaultMakeTool,
+                                   makeTool=default_make_tool,
                                    resolver=tool_resolver,
                                    strict=self.default_args['strict'])
 

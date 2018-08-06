@@ -27,6 +27,7 @@
 
 import os
 import sys
+from cwltool.context import LoadingContext
 from airflow.configuration import conf
 from airflow.exceptions import AirflowConfigException
 
@@ -81,5 +82,5 @@ def load_tool(argsworkflow,  # type: Union[Text, Dict[Text, Any]]
                             skip_schemas=kwargs.get('skip_schemas', True) if kwargs else True,
                             metadata=kwargs.get('metadata', None) if kwargs else None)
     return make_tool(document_loader, avsc_names, metadata, uri,
-                     makeTool, kwargs if kwargs else {})
+                     LoadingContext())
 
