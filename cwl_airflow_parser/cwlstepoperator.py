@@ -32,9 +32,9 @@ import copy
 from jsonmerge import merge
 
 import schema_salad.schema
-from cwltool.main import single_job_executor
+from cwltool.main import SingleJobExecutor
 from cwltool.stdfsaccess import StdFsAccess
-from cwltool.workflow import expression, defaultMakeTool
+from cwltool.workflow import expression, default_make_tool
 
 from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
