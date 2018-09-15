@@ -69,11 +69,11 @@ setup(
     install_requires=[
         'setuptools',
         'cryptography',
-        'cwltool == 1.0.20180220121300',
+        'cwltool == 1.0.20180809224403',
         'jsonmerge',
-        'ruamel.yaml < 0.15',
+        'ruamel.yaml <= 0.15.51',
         'sqlparse',
-        'apache-airflow >= 1.9.0, < 2',
+        'apache-airflow >= 1.10.0, < 1.11',
         'apache-airflow[mysql]'
     ],
     zip_safe=False,
