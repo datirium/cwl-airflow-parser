@@ -37,6 +37,9 @@ import schema_salad.schema
 from cwltool.workflow import default_make_tool
 from cwltool.errors import UnsupportedRequirement
 from cwltool.resolver import tool_resolver
+import cwltool.load_tool as load
+from cwltool.context import LoadingContext
+from cwltool.argparser import get_default_args
 
 from airflow.models import DAG
 from airflow.operators import BaseOperator
@@ -175,6 +178,9 @@ class CWLDAG(DAG):
         }
 
         _default_args.update(default_args if default_args else {})
+        _d = get_default_args()
+        _d.update(_default_args)
+
 
         self.cwl_workflow = cwl_workflow if cwl_workflow else _default_args["cwl_workflow"]
 
@@ -182,15 +188,19 @@ class CWLDAG(DAG):
             .replace(".cwl", "").replace(".", "_dot_")
 
         super(self.__class__, self).__init__(dag_id=_dag_id,
-                                             default_args=_default_args,
+                                             default_args=_d,
                                              schedule_interval=schedule_interval, *args, **kwargs)
 
+    def load_cwl(self, cwl_file):
+        load.loaders = {}
+        loading_context = LoadingContext(self.default_args)
+        loading_context.construct_tool_object = default_make_tool
+        loading_context.resolver = tool_resolver
+        return load.load_tool(cwl_file, loading_context)
+
     def create(self):
-        self.cwlwf = load_tool(argsworkflow=self.cwl_workflow,
-                               makeTool=default_make_tool,
-                               resolver=tool_resolver,
-                               kwargs=self.default_args,
-                               strict=self.default_args['strict'])
+        self.cwlwf = self.load_cwl(self.cwl_workflow)
+
         if type(self.cwlwf) == int or check_unsupported_feature(self.cwlwf.tool)[0]:
             raise UnsupportedRequirement(check_unsupported_feature(self.cwlwf.tool)[1])
 
@@ -201,10 +211,8 @@ class CWLDAG(DAG):
             generated_workflow = gen_workflow(self.cwlwf.tool, self.cwl_workflow)
             with open(new_workflow_name, 'w') as generated_workflow_stream:
                 generated_workflow_stream.write(json.dumps(generated_workflow, indent=4))
-            self.cwlwf = load_tool(argsworkflow=new_workflow_name,
-                                   makeTool=default_make_tool,
-                                   resolver=tool_resolver,
-                                   strict=self.default_args['strict'])
+
+            self.cwlwf = self.load_cwl(new_workflow_name)
 
         self.requirements = self.cwlwf.tool.get("requirements", [])
 
