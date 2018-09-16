@@ -25,6 +25,7 @@
 import logging
 import os
 import io
+import sys
 from tempfile import mkdtemp
 from json import dumps
 
@@ -77,7 +78,7 @@ class CWLJobDispatcher(BaseOperator):
             except Exception as e:
                 _logger.error("Job Loader: {}".format(str(e)))
 
-            job_order_object = init_job_order(job_order_object, None, self.dag.cwlwf)
+            job_order_object = init_job_order(job_order_object, None, self.dag.cwlwf, loader, sys.stdout)
 
             cwl_context['promises'] = job_order_object
 
