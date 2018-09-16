@@ -32,16 +32,26 @@ import copy
 from jsonmerge import merge
 
 import schema_salad.schema
-from cwltool.main import SingleJobExecutor
+from cwltool.executors import SingleJobExecutor
 from cwltool.stdfsaccess import StdFsAccess
 from cwltool.workflow import expression, default_make_tool
+from cwltool.context import RuntimeContext, getdefault
+from cwltool.pathmapper import visit_class
+from cwltool.mutation import MutationManager
 
 from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
 
 from .cwlutils import flatten, shortname
 
+from airflow.utils.log.logging_mixin import StreamLogWriter
+
 _logger = logging.getLogger(__name__)
+
+class StreamLogWriterUpdated (StreamLogWriter):
+
+    def fileno(self):
+        return -1
 
 
 class CWLStepOperator(BaseOperator):
@@ -172,15 +182,21 @@ class CWLStepOperator(BaseOperator):
         _d_args['tmp_outdir_prefix'] = _d_args['tmp_outdir_prefix'] \
             if _d_args.get('tmp_outdir_prefix') else os.path.join(_d_args['outdir'], 'cwl_outdir_')
 
-        _stderr = sys.stderr
-        sys.stderr = sys.__stderr__
-        output, status = single_job_executor(self.cwl_step.embedded_tool,
-                                             job,
-                                             makeTool=defaultMakeTool,
-                                             select_resources=None,
-                                             make_fs_access=StdFsAccess,
-                                             **_d_args)
-        sys.stderr = _stderr
+        sys.stdout = StreamLogWriterUpdated(_logger, logging.INFO)
+        sys.stderr = StreamLogWriterUpdated(_logger, logging.WARN)
+
+        executor = SingleJobExecutor()
+        runtimeContext = RuntimeContext(_d_args)
+        runtimeContext.make_fs_access = getdefault(runtimeContext.make_fs_access, StdFsAccess)
+
+        for inp in self.cwl_step.tool["inputs"]:
+            if inp.get("not_connected"):
+                del job[shortname(inp["id"].split("/")[-1])]
+
+        (output, status) = executor(self.cwl_step.embedded_tool,
+                                    job,
+                                    runtimeContext,
+                                    logger=_logger)
 
         if not output and status == "permanentFail":
             raise ValueError
@@ -196,6 +212,9 @@ class CWLStepOperator(BaseOperator):
                 promises[out_id] = output[jobout_id]
             except:
                 continue
+
+        # Unsetting the Generation from final output object
+        visit_class(out, ("File",), MutationManager().unset_generation)
 
         data = {"promises": promises, "outdir": self.outdir}
 

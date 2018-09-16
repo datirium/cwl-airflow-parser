@@ -41,6 +41,7 @@ from cwltool.resolver import tool_resolver
 from airflow.models import DAG
 from airflow.operators import BaseOperator
 from airflow.exceptions import AirflowException
+from airflow.utils.timezone import utcnow
 
 from .cwlstepoperator import CWLStepOperator
 from .cwlutils import conf_get_default, shortname, load_tool
@@ -134,7 +135,7 @@ class CWLDAG(DAG):
         tmp_folder = conf_get_default('cwl', 'tmp_folder', '/tmp')
 
         _default_args = {
-            'start_date': datetime.now(),
+            'start_date': utcnow(),
             'email_on_failure': False,
             'email_on_retry': False,
             'end_date': None,
