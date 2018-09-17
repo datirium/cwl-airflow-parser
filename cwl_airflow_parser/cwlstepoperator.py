@@ -182,6 +182,9 @@ class CWLStepOperator(BaseOperator):
         _d_args['tmp_outdir_prefix'] = _d_args['tmp_outdir_prefix'] \
             if _d_args.get('tmp_outdir_prefix') else os.path.join(_d_args['outdir'], 'cwl_outdir_')
 
+        _logger.debug(
+            '{0}: Runtime context: \n {1}'.format(self, json.dumps(_d_args, indent=4)))
+
         sys.stdout = StreamLogWriterUpdated(_logger, logging.INFO)
         sys.stderr = StreamLogWriterUpdated(_logger, logging.WARN)
 
