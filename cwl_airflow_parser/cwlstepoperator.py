@@ -182,11 +182,11 @@ class CWLStepOperator(BaseOperator):
         _d_args['tmp_outdir_prefix'] = _d_args['tmp_outdir_prefix'] \
             if _d_args.get('tmp_outdir_prefix') else os.path.join(_d_args['outdir'], 'cwl_outdir_')
 
+        _d_args['rm_tmpdir'] = False
+        _d_args["basedir"] = os.path.abspath(os.path.dirname(self.dag.default_args["job_data"]["path"]))
+
         _logger.debug(
             '{0}: Runtime context: \n {1}'.format(self, json.dumps(_d_args, indent=4)))
-
-        sys.stdout = StreamLogWriterUpdated(_logger, logging.INFO)
-        sys.stderr = StreamLogWriterUpdated(_logger, logging.WARN)
 
         executor = SingleJobExecutor()
         runtimeContext = RuntimeContext(_d_args)
@@ -196,10 +196,13 @@ class CWLStepOperator(BaseOperator):
             if inp.get("not_connected"):
                 del job[shortname(inp["id"].split("/")[-1])]
 
+        _stderr = sys.stderr
+        sys.stderr = sys.__stderr__
         (output, status) = executor(self.cwl_step.embedded_tool,
                                     job,
                                     runtimeContext,
                                     logger=_logger)
+        sys.stderr = _stderr
 
         if not output and status == "permanentFail":
             raise ValueError
