@@ -69,7 +69,7 @@ setup(
     install_requires=[
         'setuptools',
         'cryptography',
-        'cwltool == 1.0.20180809224403',
+        'cwltool == 1.0.20180912090223',
         'jsonmerge',
         'ruamel.yaml <= 0.15.51',
         'sqlparse',
