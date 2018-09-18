@@ -183,7 +183,7 @@ class CWLStepOperator(BaseOperator):
             if _d_args.get('tmp_outdir_prefix') else os.path.join(_d_args['outdir'], 'cwl_outdir_')
 
         _logger.debug(
-            '{0}: Runtime context: \n {1}'.format(self, json.dumps(_d_args, indent=4)))
+            '{0}: Runtime context: \n {1}'.format(self, _d_args))
 
         executor = SingleJobExecutor()
         runtimeContext = RuntimeContext(_d_args)
