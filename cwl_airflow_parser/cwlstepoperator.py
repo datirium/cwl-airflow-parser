@@ -211,16 +211,17 @@ class CWLStepOperator(BaseOperator):
             '{0}: Embedded tool outputs: \n {1}'.format(self.task_id, json.dumps(output, indent=4)))
 
         promises = {}
+
         for out in self.cwl_step.tool["outputs"]:
+            # Unsetting the Generation from final output object
+            visit_class(out, ("File",), MutationManager().unset_generation)
+
             out_id = shortname(out["id"])
             jobout_id = out_id.split("/")[-1]
             try:
                 promises[out_id] = output[jobout_id]
             except:
                 continue
-
-        # Unsetting the Generation from final output object
-        visit_class(out, ("File",), MutationManager().unset_generation)
 
         data = {"promises": promises, "outdir": self.outdir}
 
