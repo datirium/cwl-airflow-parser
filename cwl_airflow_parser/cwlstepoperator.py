@@ -209,9 +209,8 @@ class CWLStepOperator(BaseOperator):
 
         promises = {}
 
+
         for out in self.cwl_step.tool["outputs"]:
-            # Unsetting the Generation from final output object
-            visit_class(out, ("File",), MutationManager().unset_generation)
 
             out_id = shortname(out["id"])
             jobout_id = out_id.split("/")[-1]
@@ -219,6 +218,9 @@ class CWLStepOperator(BaseOperator):
                 promises[out_id] = output[jobout_id]
             except:
                 continue
+
+        # Unsetting the Generation from final output object
+        visit_class(promises, ("File",), MutationManager().unset_generation)
 
         data = {"promises": promises, "outdir": self.outdir}
 
