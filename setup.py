@@ -52,13 +52,6 @@ class EggInfoFromGit(egg_info):
         return egg_info.tags(self)
 
 
-def git_timestamp_tag():
-    gitinfo = check_output(
-        ['git', 'log', '--first-parent', '--max-count=1',
-         '--format=format:%ct', '.']).strip()
-    return strftime('1.0.%Y%m%d%H%M%S', gmtime(int(gitinfo)))
-
-
 tagger = EggInfoFromGit
 
 
@@ -67,7 +60,7 @@ setup(
     description='Package extends Airflow functionality with CWL v1.0 support',
     long_description=open(README).read(),
     long_description_content_type="text/markdown",
-    version=git_timestamp_tag(),
+    version='1.0',
     url='https://github.com/datirium/cwl-airflow-parser',
     download_url='https://github.com/datirium/cwl-airflow-parser',
     author='Datirium, LLC',
