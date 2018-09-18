@@ -66,6 +66,7 @@ setup(
     name='cwl-airflow-parser',
     description='Package extends Airflow functionality with CWL v1.0 support',
     long_description=open(README).read(),
+    long_description_content_type="text/markdown",
     version=git_timestamp_tag(),
     url='https://github.com/datirium/cwl-airflow-parser',
     download_url='https://github.com/datirium/cwl-airflow-parser',
