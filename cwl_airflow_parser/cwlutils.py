@@ -27,6 +27,7 @@
 
 import os
 import sys
+import json
 from cwltool.context import LoadingContext
 from airflow.configuration import conf
 from airflow.exceptions import AirflowConfigException
@@ -84,3 +85,20 @@ def load_tool(argsworkflow,  # type: Union[Text, Dict[Text, Any]]
     return make_tool(document_loader, avsc_names, metadata, uri,
                      LoadingContext())
 
+
+def post_state_info(context):
+    result = {"dag_id": context["dag_run"].dag_id,
+              "run_id": context["dag_run"].run_id,
+              "execution_date": context["dag_run"].execution_date,
+              "start_date": context["dag_run"].start_date,
+              "end_date": context["dag_run"].end_date,
+              "state": context["dag_run"].state,
+              "tasks": []}
+    for ti in context["dag_run"].get_task_instances():
+        result["tasks"].append({"task_id": ti.task_id,
+                                "start_date": ti.start_date,
+                                "end_date": ti.end_date,
+                                "state": ti.state,
+                                "try_number": ti.try_number,
+                                "max_tries": ti.max_tries})
+    print(json.dumps(result, indent=4, default=str))

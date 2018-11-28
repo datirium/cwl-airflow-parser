@@ -47,7 +47,7 @@ from airflow.exceptions import AirflowException
 from airflow.utils.timezone import utcnow
 
 from .cwlstepoperator import CWLStepOperator
-from .cwlutils import conf_get_default, shortname, load_tool
+from .cwlutils import conf_get_default, shortname, post_state_info, load_tool
 
 
 # logging.getLogger('cwltool').setLevel(conf_get_default('core', 'logging_level', 'ERROR').upper())
@@ -136,6 +136,9 @@ class CWLDAG(DAG):
         self.requirements = None
 
         tmp_folder = conf_get_default('cwl', 'tmp_folder', '/tmp')
+
+        kwargs.update({"on_failure_callback": kwargs.get("on_failure_callback", post_state_info),
+                       "on_success_callback": kwargs.get("on_success_callback", post_state_info)})
 
         _default_args = {
             'start_date': utcnow(),
