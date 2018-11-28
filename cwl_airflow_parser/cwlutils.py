@@ -85,7 +85,7 @@ def load_tool(argsworkflow,  # type: Union[Text, Dict[Text, Any]]
                      LoadingContext())
 
 
-def post_state_info(context):
+def post_status_info(context):
     try:
         # Checking connection
         http_hook = HttpHook(http_conn_id="http_status")

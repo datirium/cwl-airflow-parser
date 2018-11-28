@@ -42,7 +42,7 @@ from cwltool.mutation import MutationManager
 from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
 
-from .cwlutils import flatten, shortname, post_state_info
+from .cwlutils import flatten, shortname, post_status_info
 
 from airflow.utils.log.logging_mixin import StreamLogWriter
 
@@ -72,9 +72,9 @@ class CWLStepOperator(BaseOperator):
         self.cwl_step = cwl_step
         self.reader_task_id = None
 
-        kwargs.update({"on_failure_callback": kwargs.get("on_failure_callback", post_state_info),
-                       "on_retry_callback":   kwargs.get("on_retry_callback",   post_state_info),
-                       "on_success_callback": kwargs.get("on_success_callback", post_state_info)})
+        kwargs.update({"on_failure_callback": kwargs.get("on_failure_callback", post_status_info),
+                       "on_retry_callback":   kwargs.get("on_retry_callback", post_status_info),
+                       "on_success_callback": kwargs.get("on_success_callback", post_status_info)})
 
         super(self.__class__, self). \
             __init__(
