@@ -28,10 +28,12 @@
 import os
 import sys
 import json
+import requests
 from cwltool.context import LoadingContext
 from airflow.configuration import conf
 from airflow.exceptions import AirflowConfigException
-
+from airflow.models import Variable
+from airflow.hooks.http_hook import HttpHook
 from cwltool.load_tool import (FetcherConstructorType, resolve_tool_uri,
                                fetch_document, make_tool, validate_document)
 
@@ -87,18 +89,25 @@ def load_tool(argsworkflow,  # type: Union[Text, Dict[Text, Any]]
 
 
 def post_state_info(context):
-    result = {"dag_id": context["dag_run"].dag_id,
-              "run_id": context["dag_run"].run_id,
-              "execution_date": context["dag_run"].execution_date,
-              "start_date": context["dag_run"].start_date,
-              "end_date": context["dag_run"].end_date,
-              "state": context["dag_run"].state,
-              "tasks": []}
-    for ti in context["dag_run"].get_task_instances():
-        result["tasks"].append({"task_id": ti.task_id,
-                                "start_date": ti.start_date,
-                                "end_date": ti.end_date,
-                                "state": ti.state,
-                                "try_number": ti.try_number,
-                                "max_tries": ti.max_tries})
-    print(json.dumps(result, indent=4, default=str))
+    dag_run = context["dag_run"]
+    data_format = "%Y-%m-%d %H:%M:%S"
+    data = {"dag_id":         dag_run.dag_id,
+            "run_id":         dag_run.run_id,
+            "execution_date": dag_run.execution_date.strftime(data_format) if dag_run.execution_date else None,
+            "start_date":     dag_run.start_date.strftime(data_format) if dag_run.start_date else None,
+            "end_date":       dag_run.end_date.strftime(data_format) if dag_run.end_date else None,
+            "state":          dag_run.state,
+            "tasks":          []}
+    for ti in dag_run.get_task_instances():
+        data["tasks"].append({"task_id": ti.task_id,
+                              "start_date": ti.start_date.strftime(data_format) if ti.start_date else None,
+                              "end_date": ti.end_date.strftime(data_format) if ti.end_date else None,
+                              "state": ti.state,
+                              "try_number": ti.try_number,
+                              "max_tries": ti.max_tries})
+
+    http_hook = HttpHook(http_conn_id="http_status_update")
+    session = http_hook.get_conn()
+    url = http_hook.base_url.rstrip("/") + '/' + Variable.get("status_update_endpoint").lstrip("/")
+    prepped_request = session.prepare_request(requests.Request("POST", url, json=data))
+    http_hook.run_and_check(session, prepped_request, {})
