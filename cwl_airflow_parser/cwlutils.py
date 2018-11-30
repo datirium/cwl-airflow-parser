@@ -25,6 +25,7 @@
  ****************************************************************************"""
 
 
+import jwt
 import requests
 from cwltool.context import LoadingContext
 from airflow.configuration import conf
@@ -110,8 +111,14 @@ def post_status_info(context):
                                   "try_number": ti.try_number,
                                   "max_tries": ti.max_tries})
 
+        # Try to encode data if rsa_private_key is set
+        try:
+            data = jwt.encode(data, Variable.get("rsa_private_key"), algorithm='RS256')
+        except Exception as e:
+            print("Failed to encrypt status data:\n", e)
+
         # Posting results
-        prepped_request = session.prepare_request(requests.Request("POST", url, json=data))
+        prepped_request = session.prepare_request(requests.Request("POST", url, json={"payload": data.decode("utf-8")}))
         http_hook.run_and_check(session, prepped_request, {})
     except Exception as e:
         print("Failed to POST status updates:\n", e)
