@@ -12,3 +12,7 @@ function. Later the function should be refactored.
    openssl genrsa -out private.key 2048
    openssl rsa -in private.key -outform PEM -pubout -out public.key
    ```
+3. To test POSTing status updates, run
+   ```
+   python ./utils/server.py
+   ```
