@@ -29,6 +29,8 @@ import logging
 import json
 import os, sys, tempfile
 import copy
+import glob
+import subprocess
 from jsonmerge import merge
 
 import schema_salad.schema
@@ -177,14 +179,15 @@ class CWLStepOperator(BaseOperator):
             return {k: value_from_func(k, v) for k, v in shortio.items()}
 
         job = _post_scatter_eval(jobobj, self.cwl_step)
-        _logger.info('{0}: Final job data: \n {1}'.format(self.task_id,
-                                                          json.dumps(job, indent=4)))
+        _logger.info('{0}: Final job data: \n {1}'.format(self.task_id, json.dumps(job, indent=4)))
 
         _d_args['outdir'] = tempfile.mkdtemp(prefix=os.path.join(self.outdir, "step_tmp"))
-        _d_args['tmpdir_prefix'] = _d_args['tmpdir_prefix'] \
-            if _d_args.get('tmpdir_prefix') else os.path.join(_d_args['outdir'], 'cwl_tmp_')
-        _d_args['tmp_outdir_prefix'] = _d_args['tmp_outdir_prefix'] \
-            if _d_args.get('tmp_outdir_prefix') else os.path.join(_d_args['outdir'], 'cwl_outdir_')
+        _d_args['tmpdir_prefix'] = _d_args['tmpdir_prefix'] if _d_args.get('tmpdir_prefix') else os.path.join(_d_args['outdir'], 'cwl_tmp_')
+        _d_args['tmp_outdir_prefix'] = _d_args['tmp_outdir_prefix'] if _d_args.get('tmp_outdir_prefix') else os.path.join(_d_args['outdir'], 'cwl_outdir_')
+
+        _d_args["record_container_id"] = True
+        _d_args["cidfile_dir"] = self.outdir
+        _d_args["cidfile_prefix"] = self.task_id
 
         _logger.debug(
             '{0}: Runtime context: \n {1}'.format(self, _d_args))
@@ -232,3 +235,17 @@ class CWLStepOperator(BaseOperator):
             '{0}: Output: \n {1}'.format(self.task_id, json.dumps(data, indent=4)))
 
         return data
+
+
+    def on_kill(self):
+        _logger.info('Stopping docker container')
+        try:
+            cidfile = glob.glob(os.path.join(self.outdir, self.task_id + "*.cid"))
+            with open(cidfile[0], "r") as inp_stream:
+                p = subprocess.Popen(["docker", "kill", inp_stream.read()], shell=False)
+                try:
+                    p.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    p.kill()
+        except Exception:
+            _logger.info('Failed to stop docker container', cidfile)
