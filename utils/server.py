@@ -19,9 +19,12 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_response(200)
         self.end_headers()
         headers = self.headers
-        content = loads(self.rfile.read(int(self.headers['Content-Length'])).decode("UTF-8"))
-        payload = jwt.decode(content["payload"].encode("utf-8"), public_key, algorithms='RS256')
-        print("\n\nHeaders:\n", headers, "\n\nEcntypted content:\n", content, "\n\nDecrypted payload\n", dumps(payload, indent=4))
+        payload = loads(self.rfile.read(int(self.headers['Content-Length'])).decode("UTF-8"))["payload"]
+        try:
+            payload = jwt.decode(payload.encode("utf-8"), public_key, algorithms='RS256')
+        except Exception:
+            pass
+        print("\nHeaders:\n", headers, "\nPayload\n", dumps(payload, indent=4))
 
 
 httpd = socketserver.TCPServer(("", PORT), Handler)
