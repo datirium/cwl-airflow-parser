@@ -44,7 +44,7 @@ from cwltool.argparser import get_default_args
 from airflow.models import DAG
 from airflow.operators import BaseOperator
 from airflow.exceptions import AirflowException
-from airflow.utils.timezone import utcnow
+from airflow.utils.dates import days_ago
 
 from .cwlstepoperator import CWLStepOperator
 from .cwlutils import conf_get_default, shortname, post_status_info, load_tool
@@ -141,7 +141,7 @@ class CWLDAG(DAG):
                        "on_success_callback": kwargs.get("on_success_callback", post_status_info)})
 
         _default_args = {
-            'start_date': utcnow(),
+            'start_date': days_ago(14),
             'email_on_failure': False,
             'email_on_retry': False,
             'end_date': None,
