@@ -44,3 +44,6 @@
     Make sure that
     - `airflow webserver` is running
     
+    Note
+    - it won't work in combination with `auth_backend = cwl_airflow_parser.utils.jwt_backend`
+    
