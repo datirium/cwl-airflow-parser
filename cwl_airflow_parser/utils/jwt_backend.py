@@ -19,6 +19,6 @@ def requires_authentication(function):
             check_payload = jwt.decode(request.get_json(force=True)["check_payload"], Variable.get("rsa_public_key"), algorithms='RS256')
             assert (json_data == check_payload)
         except Exception:
-            return Response("Failed to encrypt of data is corrupted", 403)
+            return Response("Failed to encrypt or data is corrupted", 403)
         return function(*args, **kwargs)
     return decorated
