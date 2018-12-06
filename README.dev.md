@@ -46,4 +46,26 @@
     
     Note
     - it won't work in combination with `auth_backend = cwl_airflow_parser.utils.jwt_backend`
-    
+ 
+5. To completely remove DagRun
+
+   Trigger `clean_dag_run` with `remove_dag_id` and `remove_run_id` parameters set in `--conf`
+   ```bash
+   python3.6 ./utils/trigger.py -d clean_dag_run -r my_run_id -c "{\"remove_dag_id\":\"some_dag_id\", \"remove_run_id\":\"some_run_id\"}"
+   ```
+   
+   Make sure that
+   - `./utils/dags/clean_dag_run.py` is placed into dag folder
+   
+   Note
+   - `clean_dag_run` will indicate successfull execution in case
+        - `remove_dag_id` & `remove_run_id` are not found in DB
+        - dagrun that corresponds to `remove_dag_id` & `remove_run_id` doen't have any tasks that
+          have active PIDs
+        - all active PIDs of dagrun's tasks are properly killed
+   - `clean_dag_run` will indicate FAIL in case
+        - after setting `Failed` state to all the tasks of the specific dagrun (defined by `remove_dag_id` & `remove_run_id`)
+        we waited to long for scheduler to kill their PIDs. Timeout is equal to `2 * KILLED_TASK_CLEANUP_TIME` from
+        `airflow.cfg`
+   - `clean_dag_run` doesn't know if any of the tasks' PID children are stopped too 
+        
