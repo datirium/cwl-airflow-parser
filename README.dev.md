@@ -1,5 +1,17 @@
 # cwl-airflow-parser
 
+---
+
+## Table of Contents
+
+* [Posting status updates](#posting-status-updates)
+* [Triggering DAGs through API](#triggering-dags-through-api)
+  * [Without encryption](#without-encryption)
+  * [With encryption](#with-encryption)
+* [Make triggering DAGs faster](#make-triggering-dags-faster)
+* [Stopping DagRun](#stopping-dagrun)
+
+---
 
 ### Posting status updates
 1. Add new Connection
@@ -65,7 +77,7 @@
    Where `check_payload` is an encrypted object that includes only `run_id` and `conf` fields
    
    
-### Make triggering DAGs faster (even when triggering through cli)
+### Make triggering DAGs faster
 1. Update `airflow.cfg`
    ```bash
    api_client = airflow.api.client.json_client
