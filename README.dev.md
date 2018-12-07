@@ -55,7 +55,7 @@
    `http://localhost:8080/api/experimental/dags/{DAG_ID}/dag_runs` (default URL)
    
    JSON data have the following structure
-   ```json
+   ```yaml
    json_data = {
         "run_id": RUN_ID,
         "conf": "{\"job\":{\"output_folder\":\"/your/output/folder\"}}"
