@@ -36,6 +36,43 @@
    ```
    Script will listen to port `80` on `localhost` and try to decrypt data with hardcoded `public_key`
 
+   Output example:
+   ```yaml
+   {
+     "dag_id": "sleep_for_an_hour_cwl_docker",
+     "run_id": "RUN_ID",
+     "execution_date": "2018-12-07 19:57:41",
+     "start_date": "2018-12-07 19:57:41",
+     "end_date": "2018-12-07 20:57:58",
+     "state": "failed",
+     "tasks": [
+       {
+         "task_id": "CWLJobGatherer",
+         "start_date": "2018-12-07 20:57:54",
+         "end_date": "2018-12-07 20:57:56",
+         "state": "failed",
+         "try_number": 2,
+         "max_tries": 0
+       },
+       {
+         "task_id": "CWLJobDispatcher",
+         "start_date": "2018-12-07 19:57:46",
+         "end_date": "2018-12-07 19:57:48",
+         "state": "success",
+         "try_number": 2,
+         "max_tries": 0
+       },
+       {
+         "task_id": "sleep",
+         "start_date": "2018-12-07 19:57:52",
+         "end_date": "2018-12-07 20:57:52",
+         "state": "success",
+         "try_number": 2,
+         "max_tries": 0
+       }
+     ]
+   }
+   ```
 
 ### Triggering DAGs through API
 ##### Without encryption
