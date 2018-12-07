@@ -1,17 +1,22 @@
 # cwl-airflow-parser
 
 
-#### Posting status updates
+### Posting status updates
 1. Add new Connection
     - Conn Id `process_report`
     - Conn Type `HTTP`
     - Host `localhost` or any other
     - Port `80` or any other
     - Extra `{"endpoint": "satellite/v1/"` or any other
+    
+    ![Adding new connection](https://raw.githubusercontent.com/michael-kotliar/cwl-airflow-parser/master/docs/connection.png)
+    
 2. Enable encryption (if necessary)
     - Add Variables
         - `process_report_private_key`
         - `process_report_crypt_algorithm`
+    
+    ![Adding new variables](https://raw.githubusercontent.com/michael-kotliar/cwl-airflow-parser/master/docs/variables.png)
 
 3. Test posting the status updates
    ```
@@ -20,16 +25,16 @@
    Script will listen to port `80` on `localhost` and try to decrypt data with hardcoded `public_key`
 
 
-#### Triggering DAGs through API
+### Triggering DAGs through API
 ##### Without encryption
 1. Run `airflow webserver`
 2. Test triggering DAGs through API (set correct `DAG_ID` and `RUN_ID`)
-```
-curl --header "Content-Type: application/json" \
-     --request POST \
-     --data '{"run_id":"RUN_ID","conf":"{\"job\":{\"output_folder\":\"/your/output/folder\"}}"}' \
-     http://localhost:8080/api/experimental/dags/{DAG_ID}/dag_runs
-```
+   ```
+   curl --header "Content-Type: application/json" \
+        --request POST \
+        --data '{"run_id":"RUN_ID","conf":"{\"job\":{\"output_folder\":\"/your/output/folder\"}}"}' \
+        http://localhost:8080/api/experimental/dags/{DAG_ID}/dag_runs
+   ```
 
 ##### With encryption
 1. Update `airflow.cfg`
@@ -60,12 +65,7 @@ curl --header "Content-Type: application/json" \
    Where `check_payload` is an encrypted object that includes only `run_id` and `conf` fields
    
    
-   
-   
-   
-   
-   
-#### Make triggering DAGs faster (even when triggering through cli)
+### Make triggering DAGs faster (even when triggering through cli)
 1. Update `airflow.cfg`
    ```bash
    api_client = airflow.api.client.json_client
@@ -78,7 +78,8 @@ curl --header "Content-Type: application/json" \
     - `airflow webserver` should be running
     - it won't work in combination with `auth_backend = cwl_airflow_parser.utils.jwt_backend`
  
-#### Stopping DagRun 
+ 
+### Stopping DagRun 
 1. Copy `./utils/dags/clean_dag_run.py` into the dag folder
 2. Trigger `clean_dag_run` with `remove_dag_id` and `remove_run_id` parameters set in `--conf`
    ```bash
