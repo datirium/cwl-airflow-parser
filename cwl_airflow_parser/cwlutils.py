@@ -25,12 +25,14 @@
  ****************************************************************************"""
 
 
-import os
-import sys
+import jwt
+import requests
 from cwltool.context import LoadingContext
 from airflow.configuration import conf
 from airflow.exceptions import AirflowConfigException
-
+from airflow.models import Variable
+from airflow.utils.state import State
+from airflow.hooks.http_hook import HttpHook
 from cwltool.load_tool import (FetcherConstructorType, resolve_tool_uri,
                                fetch_document, make_tool, validate_document)
 
@@ -84,3 +86,54 @@ def load_tool(argsworkflow,  # type: Union[Text, Dict[Text, Any]]
     return make_tool(document_loader, avsc_names, metadata, uri,
                      LoadingContext())
 
+
+def post_status_info(context):
+    try:
+        # Checking connection
+        http_hook = HttpHook(http_conn_id="http_status")
+        session = http_hook.get_conn()
+        url = http_hook.base_url.rstrip("/") + '/' + Variable.get("http_status_endpoint").lstrip("/")
+
+        # Preparing data
+        dag_run = context["dag_run"]
+        data_format = "%Y-%m-%d %H:%M:%S"
+        data = {"dag_id": dag_run.dag_id,
+                "run_id": dag_run.run_id,
+                "execution_date": dag_run.execution_date.strftime(data_format) if dag_run.execution_date else None,
+                "start_date": dag_run.start_date.strftime(data_format) if dag_run.start_date else None,
+                "end_date": dag_run.end_date.strftime(data_format) if dag_run.end_date else None,
+                "state": dag_run.state,
+                "tasks": []}
+        for ti in dag_run.get_task_instances():
+            data["tasks"].append({"task_id": ti.task_id,
+                                  "start_date": ti.start_date.strftime(data_format) if ti.start_date else None,
+                                  "end_date": ti.end_date.strftime(data_format) if ti.end_date else None,
+                                  "state": ti.state,
+                                  "try_number": ti.try_number,
+                                  "max_tries": ti.max_tries})
+
+        # Add DagRun results
+        #   Results should be collected only from CWLJobGatherer class or any other class that inherits from it.
+        #   Optimal solution would be to check ifinstance(ti, CWLJobGatherer), but unless code in cwlutils.py is
+        #   refactored, import of CWLJobGatherer may cause LOOP.
+        #   Therefore we check if isinstance(ti.xcom_pull(task_ids=ti.task_id), tuple), because only CWLJobGatherer
+        #   returns tuple.
+        #   Additionally, when post_status_info function is called as callback from CWLDAG, the context is equal to
+        #   the context of tasks[-1], where the order of tasks depends on DB and cannot be stable.
+        if dag_run.state == State.SUCCESS:
+            try:
+                data["results"] = [ti.xcom_pull(task_ids=ti.task_id)[0] for ti in dag_run.get_task_instances() if isinstance(ti.xcom_pull(task_ids=ti.task_id), tuple)][0]
+            except Exception as ex:
+                print("Failed to collect results\n", ex)
+
+        # Try to encode data if rsa_private_key is set
+        try:
+            data = jwt.encode(data, Variable.get("rsa_private_key"), algorithm='RS256').decode("utf-8")
+        except Exception as e:
+            print("Failed to encrypt status data:\n", e)
+
+        # Posting results
+        prepped_request = session.prepare_request(requests.Request("POST", url, json={"payload": data}))
+        http_hook.run_and_check(session, prepped_request, {})
+    except Exception as e:
+        print("Failed to POST status updates:\n", e)

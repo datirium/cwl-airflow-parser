@@ -35,7 +35,7 @@ import ruamel.yaml as yaml
 
 from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
-
+from ..cwlutils import post_status_info
 from cwltool.main import jobloaderctx, init_job_order
 
 _logger = logging.getLogger(__name__)
@@ -54,6 +54,11 @@ class CWLJobDispatcher(BaseOperator):
             tmp_folder=None,
             *args, **kwargs):
         task_id = task_id if task_id else self.__class__.__name__
+
+        kwargs.update({"on_failure_callback": kwargs.get("on_failure_callback", post_status_info),
+                       "on_retry_callback":   kwargs.get("on_retry_callback", post_status_info),
+                       "on_success_callback": kwargs.get("on_success_callback", post_status_info)})
+
         super(CWLJobDispatcher, self).__init__(task_id=task_id, *args, **kwargs)
 
         self.tmp_folder = tmp_folder if tmp_folder else self.dag.default_args['tmp_folder']

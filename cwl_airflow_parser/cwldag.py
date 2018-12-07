@@ -44,10 +44,10 @@ from cwltool.argparser import get_default_args
 from airflow.models import DAG
 from airflow.operators import BaseOperator
 from airflow.exceptions import AirflowException
-from airflow.utils.timezone import utcnow
+from airflow.utils.dates import days_ago
 
 from .cwlstepoperator import CWLStepOperator
-from .cwlutils import conf_get_default, shortname, load_tool
+from .cwlutils import conf_get_default, shortname, post_status_info, load_tool
 
 
 # logging.getLogger('cwltool').setLevel(conf_get_default('core', 'logging_level', 'ERROR').upper())
@@ -137,8 +137,11 @@ class CWLDAG(DAG):
 
         tmp_folder = conf_get_default('cwl', 'tmp_folder', '/tmp')
 
+        kwargs.update({"on_failure_callback": kwargs.get("on_failure_callback", post_status_info),
+                       "on_success_callback": kwargs.get("on_success_callback", post_status_info)})
+
         _default_args = {
-            'start_date': utcnow(),
+            'start_date': days_ago(14),
             'email_on_failure': False,
             'email_on_retry': False,
             'end_date': None,

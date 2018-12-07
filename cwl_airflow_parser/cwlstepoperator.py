@@ -29,6 +29,9 @@ import logging
 import json
 import os, sys, tempfile
 import copy
+import glob
+import subprocess
+import shutil
 from jsonmerge import merge
 
 import schema_salad.schema
@@ -42,7 +45,7 @@ from cwltool.mutation import MutationManager
 from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
 
-from .cwlutils import flatten, shortname
+from .cwlutils import flatten, shortname, post_status_info
 
 from airflow.utils.log.logging_mixin import StreamLogWriter
 
@@ -71,6 +74,10 @@ class CWLStepOperator(BaseOperator):
         self.outdir = None
         self.cwl_step = cwl_step
         self.reader_task_id = None
+
+        kwargs.update({"on_failure_callback": kwargs.get("on_failure_callback", post_status_info),
+                       "on_retry_callback":   kwargs.get("on_retry_callback", post_status_info),
+                       "on_success_callback": kwargs.get("on_success_callback", post_status_info)})
 
         super(self.__class__, self). \
             __init__(
@@ -173,14 +180,15 @@ class CWLStepOperator(BaseOperator):
             return {k: value_from_func(k, v) for k, v in shortio.items()}
 
         job = _post_scatter_eval(jobobj, self.cwl_step)
-        _logger.info('{0}: Final job data: \n {1}'.format(self.task_id,
-                                                          json.dumps(job, indent=4)))
+        _logger.info('{0}: Final job data: \n {1}'.format(self.task_id, json.dumps(job, indent=4)))
 
         _d_args['outdir'] = tempfile.mkdtemp(prefix=os.path.join(self.outdir, "step_tmp"))
-        _d_args['tmpdir_prefix'] = _d_args['tmpdir_prefix'] \
-            if _d_args.get('tmpdir_prefix') else os.path.join(_d_args['outdir'], 'cwl_tmp_')
-        _d_args['tmp_outdir_prefix'] = _d_args['tmp_outdir_prefix'] \
-            if _d_args.get('tmp_outdir_prefix') else os.path.join(_d_args['outdir'], 'cwl_outdir_')
+        _d_args['tmpdir_prefix'] = _d_args['tmpdir_prefix'] if _d_args.get('tmpdir_prefix') else os.path.join(_d_args['outdir'], 'cwl_tmp_')
+        _d_args['tmp_outdir_prefix'] = _d_args['tmp_outdir_prefix'] if _d_args.get('tmp_outdir_prefix') else os.path.join(_d_args['outdir'], 'cwl_outdir_')
+
+        _d_args["record_container_id"] = True
+        _d_args["cidfile_dir"] = self.outdir
+        _d_args["cidfile_prefix"] = self.task_id
 
         _logger.debug(
             '{0}: Runtime context: \n {1}'.format(self, _d_args))
@@ -228,3 +236,26 @@ class CWLStepOperator(BaseOperator):
             '{0}: Output: \n {1}'.format(self.task_id, json.dumps(data, indent=4)))
 
         return data
+
+
+    def on_kill(self):
+        _logger.info("Stop docker containers")
+        for cidfile in glob.glob(os.path.join(self.outdir, self.task_id + "*.cid")):
+            try:
+                with open(cidfile, "r") as inp_stream:
+                    _logger.debug(f"""Read container id from {cidfile}""")
+                    command = ["docker", "kill", inp_stream.read()]
+                    _logger.debug(f"""Call {" ".join(command)}""")
+                    p = subprocess.Popen(command, shell=False)
+                    try:
+                        p.wait(timeout=10)
+                    except subprocess.TimeoutExpired:
+                        p.kill()
+            except Exception as ex:
+                _logger.error(f"""Failed to stop docker container with ID from {cidfile}\n {ex}""")
+
+        _logger.info(f"""Delete temporary output directory {self.outdir}""")
+        try:
+            shutil.rmtree(self.outdir)
+        except Exception as ex:
+            _logger.error(f"""Failed to delete temporary output directory {self.outdir}\n {ex}""")

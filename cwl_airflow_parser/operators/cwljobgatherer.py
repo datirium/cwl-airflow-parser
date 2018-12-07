@@ -33,7 +33,7 @@ from airflow.utils import apply_defaults
 
 from cwltool.process import relocateOutputs
 from cwltool.stdfsaccess import StdFsAccess
-
+from ..cwlutils import post_status_info
 from ..cwlstepoperator import CWLStepOperator
 
 _logger = logging.getLogger(__name__)
@@ -51,6 +51,11 @@ class CWLJobGatherer(BaseOperator):
             reader_task_id=None,
             *args, **kwargs):
         task_id = task_id if task_id else self.__class__.__name__
+
+        kwargs.update({"on_failure_callback": kwargs.get("on_failure_callback", post_status_info),
+                       "on_retry_callback":   kwargs.get("on_retry_callback", post_status_info),
+                       "on_success_callback": kwargs.get("on_success_callback", post_status_info)})
+
         super(CWLJobGatherer, self).__init__(task_id=task_id, *args, **kwargs)
 
         self.outputs = self.dag.get_output_list()
