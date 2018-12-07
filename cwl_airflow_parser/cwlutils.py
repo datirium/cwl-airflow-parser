@@ -88,11 +88,17 @@ def load_tool(argsworkflow,  # type: Union[Text, Dict[Text, Any]]
 
 
 def post_status_info(context):
+    CONN_ID = "process_report"
+    ROUTE = "status"
+    CRYPT_PRIVATE_KEY = "process_report_private_key"
+    CRYPT_ALGORITHM = "process_report_crypt_algorithm"
+
     try:
         # Checking connection
-        http_hook = HttpHook(http_conn_id="http_status")
+        http_hook = HttpHook(http_conn_id=CONN_ID)
         session = http_hook.get_conn()
-        url = http_hook.base_url.rstrip("/") + '/' + Variable.get("http_status_endpoint").lstrip("/")
+        endpoint = session.headers["endpoint"]
+        url = http_hook.base_url.rstrip("/") + '/' + endpoint.strip("/") + "/" + ROUTE.lstrip("/")
 
         # Preparing data
         dag_run = context["dag_run"]
@@ -126,9 +132,9 @@ def post_status_info(context):
             except Exception as ex:
                 print("Failed to collect results\n", ex)
 
-        # Try to encode data if rsa_private_key is set
+        # Try to encode data if CRYPT_PRIVATE_KEY is set in Variable
         try:
-            data = jwt.encode(data, Variable.get("rsa_private_key"), algorithm='RS256').decode("utf-8")
+            data = jwt.encode(data, Variable.get(CRYPT_PRIVATE_KEY), algorithm=Variable.get(CRYPT_ALGORITHM)).decode("utf-8")
         except Exception as e:
             print("Failed to encrypt status data:\n", e)
 
