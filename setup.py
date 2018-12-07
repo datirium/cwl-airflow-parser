@@ -50,6 +50,7 @@ class EggInfoFromGit(egg_info):
             except CalledProcessError:
                 pass
         return egg_info.tags(self)
+    vtags = property(tags)
 
 
 tagger = EggInfoFromGit
