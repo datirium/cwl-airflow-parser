@@ -35,9 +35,12 @@ import shutil
 from jsonmerge import merge
 
 import schema_salad.schema
+import cwltool.load_tool as load
+from cwltool.context import LoadingContext
 from cwltool.executors import SingleJobExecutor
 from cwltool.stdfsaccess import StdFsAccess
 from cwltool.workflow import expression, default_make_tool
+from cwltool.resolver import tool_resolver
 from cwltool.context import RuntimeContext, getdefault
 from cwltool.pathmapper import visit_class
 from cwltool.mutation import MutationManager
@@ -65,31 +68,37 @@ class CWLStepOperator(BaseOperator):
     @apply_defaults
     def __init__(
             self,
-            cwl_step,
             task_id=None,
             reader_task_id=None,
             ui_color=None,
             *args, **kwargs):
 
         self.outdir = None
-        self.cwl_step = cwl_step
         self.reader_task_id = None
 
         kwargs.update({"on_failure_callback": kwargs.get("on_failure_callback", post_status_info),
                        "on_retry_callback":   kwargs.get("on_retry_callback", post_status_info),
                        "on_success_callback": kwargs.get("on_success_callback", post_status_info)})
 
-        super(self.__class__, self). \
-            __init__(
-            task_id=task_id if task_id else shortname(cwl_step.tool["id"]).split("/")[-1],
-            *args, **kwargs)
+        super(self.__class__, self).__init__(task_id=task_id, *args, **kwargs)
 
         self.reader_task_id = reader_task_id if reader_task_id else self.reader_task_id
 
         if ui_color:
             self.ui_color = ui_color
 
+
+    def load_cwl_step(self, cwl_file, step_id):
+        load.loaders = {}
+        loading_context = LoadingContext(self.dag.default_args)
+        loading_context.construct_tool_object = default_make_tool
+        loading_context.resolver = tool_resolver
+        return [step for step in load.load_tool(cwl_file, loading_context).steps if step_id in step.id][0]
+
+
     def execute(self, context):
+
+        self.cwl_step = self.load_cwl_step(self.dag.default_args["cwl_workflow"], self.task_id)
 
         _logger.info('{0}: Running!'.format(self.task_id))
         _logger.debug('{0}: Running tool: \n{1}'.format(self.task_id,
