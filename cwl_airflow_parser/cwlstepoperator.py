@@ -34,10 +34,9 @@ import subprocess
 import shutil
 from jsonmerge import merge
 
-import schema_salad.schema
 from cwltool.executors import SingleJobExecutor
 from cwltool.stdfsaccess import StdFsAccess
-from cwltool.workflow import expression, default_make_tool
+from cwltool.workflow import expression
 from cwltool.context import RuntimeContext, getdefault
 from cwltool.pathmapper import visit_class
 from cwltool.mutation import MutationManager
@@ -45,7 +44,7 @@ from cwltool.mutation import MutationManager
 from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
 
-from .cwlutils import flatten, shortname, post_status_info
+from .cwlutils import flatten, shortname, post_status_info, load_cwl
 
 from airflow.utils.log.logging_mixin import StreamLogWriter
 
@@ -65,31 +64,29 @@ class CWLStepOperator(BaseOperator):
     @apply_defaults
     def __init__(
             self,
-            cwl_step,
             task_id=None,
             reader_task_id=None,
             ui_color=None,
             *args, **kwargs):
 
         self.outdir = None
-        self.cwl_step = cwl_step
         self.reader_task_id = None
 
         kwargs.update({"on_failure_callback": kwargs.get("on_failure_callback", post_status_info),
                        "on_retry_callback":   kwargs.get("on_retry_callback", post_status_info),
                        "on_success_callback": kwargs.get("on_success_callback", post_status_info)})
 
-        super(self.__class__, self). \
-            __init__(
-            task_id=task_id if task_id else shortname(cwl_step.tool["id"]).split("/")[-1],
-            *args, **kwargs)
+        super(self.__class__, self).__init__(task_id=task_id, *args, **kwargs)
 
         self.reader_task_id = reader_task_id if reader_task_id else self.reader_task_id
 
         if ui_color:
             self.ui_color = ui_color
 
+
     def execute(self, context):
+
+        self.cwl_step = load_cwl(self.dag.default_args["cwl_workflow"], self.dag.default_args, self.task_id)
 
         _logger.info('{0}: Running!'.format(self.task_id))
         _logger.debug('{0}: Running tool: \n{1}'.format(self.task_id,

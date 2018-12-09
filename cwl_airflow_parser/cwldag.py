@@ -27,29 +27,17 @@
  ****************************************************************************"""
 
 
-import os
-import json
 import logging
-from datetime import datetime
+import json
+from ruamel import yaml
 from six.moves import urllib
-
-import schema_salad.schema
-from cwltool.workflow import default_make_tool
-from cwltool.errors import UnsupportedRequirement
-from cwltool.resolver import tool_resolver
-import cwltool.load_tool as load
-from cwltool.context import LoadingContext
 from cwltool.argparser import get_default_args
-
 from airflow.models import DAG
 from airflow.operators import BaseOperator
 from airflow.exceptions import AirflowException
 from airflow.utils.dates import days_ago
-
 from .cwlstepoperator import CWLStepOperator
 from .cwlutils import conf_get_default, shortname, post_status_info, load_tool
-
-
 # logging.getLogger('cwltool').setLevel(conf_get_default('core', 'logging_level', 'ERROR').upper())
 # logging.getLogger('salad').setLevel(conf_get_default('core', 'logging_level', 'ERROR').upper())
 logging.getLogger('cwltool').setLevel(logging.ERROR)
@@ -61,185 +49,83 @@ _logger = logging.getLogger(__name__)
 _logger.setLevel(conf_get_default('core', 'logging_level', 'ERROR').upper())
 
 
-def check_unsupported_feature(tool):
-    if tool["class"] == "Workflow" and [step["id"] for step in tool["steps"] if "scatter" in step]:
-        return True, "Scatter is not supported"
-    return False, None
-
-
-def gen_workflow_inputs(cwl_tool):
-    inputs = []
-    for _input in cwl_tool["inputs"]:
-        custom_input = {}
-        if _input.get("id", None): custom_input["id"] = shortname(_input["id"])
-        if _input.get("type", None): custom_input["type"] = _input["type"]
-        if _input.get("format", None): custom_input["format"] = _input["format"]
-        if _input.get("doc", None): custom_input["doc"] = _input["doc"]
-        if _input.get("label", None): custom_input["label"] = _input["label"]
-        inputs.append(custom_input)
-    return inputs
-
-
-def gen_workflow_outputs(cwl_tool):
-    outputs = []
-    for output in cwl_tool["outputs"]:
-        custom_output = {}
-        if output.get("id", None): custom_output["id"] = shortname(output["id"])
-        if output.get("type", None): custom_output["type"] = output["type"]
-        if output.get("format", None): custom_output["format"] = output["format"]
-        if output.get("doc", None): custom_output["doc"] = output["doc"]
-        if output.get("label", None): custom_output["label"] = output["label"]
-        if output.get("id", None): custom_output["outputSource"] = "static_step/" + shortname(output["id"])
-        outputs.append(custom_output)
-    return outputs
-
-
-def gen_workflow_steps(cwl_file, workflow_inputs, workflow_outputs):
-    return [{
-        "run": cwl_file,
-        "in": [{"source": workflow_input["id"], "id": workflow_input["id"]} for workflow_input in workflow_inputs],
-        "out": [output["id"] for output in workflow_outputs],
-        "id": "static_step"
-    }]
-
-
-def gen_workflow(cwl_tool, cwl_file):
-    a_workflow = {
-        "cwlVersion": "v1.0",
-        "class": "Workflow",
-        "inputs": gen_workflow_inputs(cwl_tool),
-        "outputs": gen_workflow_outputs(cwl_tool)
-    }
-    a_workflow["steps"] = gen_workflow_steps(cwl_file, a_workflow["inputs"], a_workflow["outputs"])
-    if cwl_tool.get("$namespaces", None): a_workflow["$namespaces"] = cwl_tool["$namespaces"]
-    if cwl_tool.get("$schemas", None): a_workflow["$schemas"] = cwl_tool["$schemas"]
-    if cwl_tool.get("requirements", None): a_workflow["requirements"] = cwl_tool["requirements"]
-    return a_workflow
-
-
 class CWLDAG(DAG):
-
-    def crawl_for_tasks(self, objects):
-        pass
 
     def __init__(
             self,
             dag_id=None,
             cwl_workflow=None,
-            default_args=None,
+            default_args={},
             schedule_interval=None,
             *args, **kwargs):
 
         self.top_task = None
         self.bottom_task = None
-        self.cwlwf = None
-        self.requirements = None
-
-        tmp_folder = conf_get_default('cwl', 'tmp_folder', '/tmp')
+        self.cwlwf = self.load_cwl(cwl_workflow)
 
         kwargs.update({"on_failure_callback": kwargs.get("on_failure_callback", post_status_info),
                        "on_success_callback": kwargs.get("on_success_callback", post_status_info)})
 
-        _default_args = {
+        init_default_args = {
             'start_date': days_ago(14),
             'email_on_failure': False,
             'email_on_retry': False,
             'end_date': None,
 
-            'tmp_folder': tmp_folder,
-            'basedir': tmp_folder,
-
-            'print_deps': False,
-            'print_pre': False,
-            'print_rdf': False,
-            'print_dot': False,
-            'relative_deps': False,
-            'use_container': True,
-            'rm_container': True,
-            'enable_pull': True,
-            'preserve_environment': ["PATH"],
-            'preserve_entire_environment': False,
-            'print_input_deps': False,
-            'cachedir': None,
-            'rm_tmpdir': True,
-            'move_outputs': 'move',
-            'eval_timeout': 20,
+            'tmp_folder': conf_get_default('cwl', 'tmp_folder', '/tmp'),
+            'basedir': conf_get_default('cwl', 'tmp_folder', '/tmp'),
             'quiet': False,
-            'version': False,
-            'enable_dev': False,
-            'enable_ext': False,
             'strict': False,
-            'rdf_serializer': None,
-            'tool_help': False,
-            'pack': False,
             'on_error': 'continue',
-            'relax_path_checks': False,
-            'validate': False,
-            'compute_checksum': True,
             'skip_schemas': True,
-            'no_match_user': False,
+
+            'cwl_workflow': cwl_workflow
         }
 
-        _default_args.update(default_args if default_args else {})
-        _d = get_default_args()
-        _d.update(_default_args)
+        init_default_args.update(default_args)
+        merged_default_args = get_default_args()
+        merged_default_args.update(init_default_args)
 
-
-        self.cwl_workflow = cwl_workflow if cwl_workflow else _default_args["cwl_workflow"]
-
-        _dag_id = dag_id if dag_id else urllib.parse.urldefrag(self.cwl_workflow)[0].split("/")[-1] \
-            .replace(".cwl", "").replace(".", "_dot_")
-
-        super(self.__class__, self).__init__(dag_id=_dag_id,
-                                             default_args=_d,
+        super(self.__class__, self).__init__(dag_id=dag_id if dag_id else urllib.parse.urldefrag(cwl_workflow)[0].split("/")[-1].replace(".cwl", "").replace(".", "_dot_"),
+                                             default_args=merged_default_args,
                                              schedule_interval=schedule_interval, *args, **kwargs)
 
     def load_cwl(self, cwl_file):
-        load.loaders = {}
-        loading_context = LoadingContext(self.default_args)
-        loading_context.construct_tool_object = default_make_tool
-        loading_context.resolver = tool_resolver
-        return load.load_tool(cwl_file, loading_context)
+        with open(cwl_file, "r") as input_stream:
+            cwl_data = yaml.round_trip_load(input_stream, preserve_quotes=True)
+        return cwl_data
 
     def create(self):
-        self.cwlwf = self.load_cwl(self.cwl_workflow)
-
-        if type(self.cwlwf) == int or check_unsupported_feature(self.cwlwf.tool)[0]:
-            raise UnsupportedRequirement(check_unsupported_feature(self.cwlwf.tool)[1])
-
-        if self.cwlwf.tool["class"] == "CommandLineTool" or self.cwlwf.tool["class"] == "ExpressionTool":
-            dirname = os.path.dirname(self.default_args["cwl_workflow"])
-            filename, ext = os.path.splitext(os.path.basename(self.cwl_workflow))
-            new_workflow_name = os.path.join(dirname, filename + '_workflow' + ext)
-            generated_workflow = gen_workflow(self.cwlwf.tool, self.cwl_workflow)
-            with open(new_workflow_name, 'w') as generated_workflow_stream:
-                generated_workflow_stream.write(json.dumps(generated_workflow, indent=4))
-
-            self.cwlwf = self.load_cwl(new_workflow_name)
-
-        self.requirements = self.cwlwf.tool.get("requirements", [])
-
         outputs = {}
 
-        for step in self.cwlwf.steps:
-            cwl_task = CWLStepOperator(cwl_step=step,
+        for step_id, step_val in self.cwlwf["steps"].items():
+            cwl_task = CWLStepOperator(task_id=step_id,
                                        dag=self,
                                        ui_color='#5C6BC0')
-            outputs[shortname(step.tool["id"])] = cwl_task
+            outputs[step_id] = cwl_task
 
-            for out in step.tool["outputs"]:
-                outputs[shortname(out["id"])] = cwl_task
+            for out in step_val["out"]:
+                outputs["/".join([step_id, out])] = cwl_task
 
-        for step in self.cwlwf.steps:
-            current_task = outputs[shortname(step.tool["id"])]
-
-            for inp in step.tool["inputs"]:
-                step_input_sources = inp.get("source", '') \
-                    if isinstance(inp.get("source", ''), list) \
-                    else [inp.get("source", '')]
+        for step_id, step_val in self.cwlwf["steps"].items():
+            current_task = outputs[step_id]
+            if not step_val["in"]:  # need to check it, because in can be set as []
+                continue
+            for inp_id, inp_val in step_val["in"].items():
+                if isinstance(inp_val, list):
+                    step_input_sources = inp_val
+                elif isinstance(inp_val, str):
+                    step_input_sources = [inp_val]
+                elif isinstance(inp_val, dict) and "source" in inp_val:
+                    if isinstance(inp_val["source"], list):
+                        step_input_sources = inp_val["source"]
+                    else:
+                        step_input_sources = [inp_val["source"]]
+                else:
+                    step_input_sources = []
 
                 for source in step_input_sources:
-                    parent_task = outputs.get(shortname(source), None)
+                    parent_task = outputs.get(source, None)
                     if parent_task and parent_task not in current_task.upstream_list:
                         current_task.set_upstream(parent_task)
 
@@ -269,11 +155,6 @@ class CWLDAG(DAG):
                     t.reader_task_id = self.top_task.task_id
 
     def get_output_list(self):
-        outputs = {
-            shortname(_output["outputSource"]): shortname(_output["id"])
-            for _output in self.cwlwf.tool["outputs"]
-            if _output.get("outputSource", False)
-        }
-        _logger.debug("{0} get_output_list: \n{1} \n {2}"
-                      .format(self.dag_id, outputs, self.cwlwf.tool["outputs"]))
+        outputs = {out_val["outputSource"]: out_id for out_id, out_val in self.cwlwf["outputs"].items() if "outputSource" in out_val}
+        _logger.debug("{0} get_output_list: \n{1}".format(self.dag_id, outputs))
         return outputs
