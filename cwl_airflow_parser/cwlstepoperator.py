@@ -34,13 +34,9 @@ import subprocess
 import shutil
 from jsonmerge import merge
 
-import schema_salad.schema
-import cwltool.load_tool as load
-from cwltool.context import LoadingContext
 from cwltool.executors import SingleJobExecutor
 from cwltool.stdfsaccess import StdFsAccess
-from cwltool.workflow import expression, default_make_tool
-from cwltool.resolver import tool_resolver
+from cwltool.workflow import expression
 from cwltool.context import RuntimeContext, getdefault
 from cwltool.pathmapper import visit_class
 from cwltool.mutation import MutationManager
@@ -48,7 +44,7 @@ from cwltool.mutation import MutationManager
 from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
 
-from .cwlutils import flatten, shortname, post_status_info
+from .cwlutils import flatten, shortname, post_status_info, load_cwl
 
 from airflow.utils.log.logging_mixin import StreamLogWriter
 
@@ -88,17 +84,9 @@ class CWLStepOperator(BaseOperator):
             self.ui_color = ui_color
 
 
-    def load_cwl_step(self, cwl_file, step_id):
-        load.loaders = {}
-        loading_context = LoadingContext(self.dag.default_args)
-        loading_context.construct_tool_object = default_make_tool
-        loading_context.resolver = tool_resolver
-        return [step for step in load.load_tool(cwl_file, loading_context).steps if step_id in step.id][0]
-
-
     def execute(self, context):
 
-        self.cwl_step = self.load_cwl_step(self.dag.default_args["cwl_workflow"], self.task_id)
+        self.cwl_step = load_cwl(self.dag.default_args["cwl_workflow"], self.dag.default_args, self.task_id)
 
         _logger.info('{0}: Running!'.format(self.task_id))
         _logger.debug('{0}: Running tool: \n{1}'.format(self.task_id,

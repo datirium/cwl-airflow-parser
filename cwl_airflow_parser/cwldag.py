@@ -27,8 +27,9 @@
  ****************************************************************************"""
 
 
-import yaml
 import logging
+import json
+from ruamel import yaml
 from six.moves import urllib
 from cwltool.argparser import get_default_args
 from airflow.models import DAG
@@ -91,7 +92,7 @@ class CWLDAG(DAG):
 
     def load_cwl(self, cwl_file):
         with open(cwl_file, "r") as input_stream:
-            cwl_data = yaml.load(input_stream)
+            cwl_data = yaml.round_trip_load(input_stream, preserve_quotes=True)
         return cwl_data
 
     def create(self):
@@ -108,7 +109,8 @@ class CWLDAG(DAG):
 
         for step_id, step_val in self.cwlwf["steps"].items():
             current_task = outputs[step_id]
-
+            if not step_val["in"]:  # need to check it, because in can be set as []
+                continue
             for inp_id, inp_val in step_val["in"].items():
                 if isinstance(inp_val, list):
                     step_input_sources = inp_val

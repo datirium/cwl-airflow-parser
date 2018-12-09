@@ -35,7 +35,7 @@ import ruamel.yaml as yaml
 
 from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
-from ..cwlutils import post_status_info
+from ..cwlutils import post_status_info, load_cwl
 from cwltool.main import jobloaderctx, init_job_order
 
 _logger = logging.getLogger(__name__)
@@ -66,13 +66,14 @@ class CWLJobDispatcher(BaseOperator):
 
     def cwl_dispatch(self, json):
         try:
+            cwlwf = load_cwl(self.dag.default_args["cwl_workflow"], self.dag.default_args)
             cwl_context = {
                 "outdir": mkdtemp(
                     prefix=os.path.abspath(os.path.join(self.tmp_folder, 'dag_tmp_')))
             }
 
             _jobloaderctx = jobloaderctx.copy()
-            _jobloaderctx.update(self.dag.cwlwf.metadata.get("$namespaces", {}))
+            _jobloaderctx.update(cwlwf.metadata.get("$namespaces", {}))
             loader = Loader(_jobloaderctx)
 
             try:
@@ -83,7 +84,7 @@ class CWLJobDispatcher(BaseOperator):
             except Exception as e:
                 _logger.error("Job Loader: {}".format(str(e)))
 
-            job_order_object = init_job_order(job_order_object, None, self.dag.cwlwf, loader, sys.stdout)
+            job_order_object = init_job_order(job_order_object, None, cwlwf, loader, sys.stdout)
 
             cwl_context['promises'] = job_order_object
 

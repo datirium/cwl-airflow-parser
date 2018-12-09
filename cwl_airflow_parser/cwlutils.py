@@ -27,6 +27,7 @@
 
 import jwt
 import requests
+import cwltool.load_tool as load
 from cwltool.context import LoadingContext
 from airflow.configuration import conf
 from airflow.exceptions import AirflowConfigException
@@ -35,6 +36,8 @@ from airflow.utils.state import State
 from airflow.hooks.http_hook import HttpHook
 from cwltool.load_tool import (FetcherConstructorType, resolve_tool_uri,
                                fetch_document, make_tool, validate_document)
+from cwltool.resolver import tool_resolver
+from cwltool.workflow import default_make_tool
 
 
 def flatten(input_list):
@@ -85,6 +88,18 @@ def load_tool(argsworkflow,  # type: Union[Text, Dict[Text, Any]]
                             metadata=kwargs.get('metadata', None) if kwargs else None)
     return make_tool(document_loader, avsc_names, metadata, uri,
                      LoadingContext())
+
+
+def load_cwl(cwl_file, default_args, step_id=None):
+    load.loaders = {}
+    loading_context = LoadingContext(default_args)
+    loading_context.construct_tool_object = default_make_tool
+    loading_context.resolver = tool_resolver
+    cwlwf = load.load_tool(cwl_file, loading_context)
+    if step_id:
+        return [step for step in cwlwf.steps if step_id in step.id][0]
+    else:
+        return cwlwf
 
 
 def post_status_info(context):
