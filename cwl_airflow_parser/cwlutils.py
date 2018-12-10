@@ -90,16 +90,12 @@ def load_tool(argsworkflow,  # type: Union[Text, Dict[Text, Any]]
                      LoadingContext())
 
 
-def load_cwl(cwl_file, default_args, step_id=None):
+def load_cwl(cwl_file, default_args):
     load.loaders = {}
     loading_context = LoadingContext(default_args)
     loading_context.construct_tool_object = default_make_tool
     loading_context.resolver = tool_resolver
-    cwlwf = load.load_tool(cwl_file, loading_context)
-    if step_id:
-        return [step for step in cwlwf.steps if step_id in step.id][0]
-    else:
-        return cwlwf
+    return load.load_tool(cwl_file, loading_context)
 
 
 def post_status_info(context):

@@ -86,7 +86,7 @@ class CWLStepOperator(BaseOperator):
 
     def execute(self, context):
         self.cwlwf = load_cwl(self.dag.default_args["cwl_workflow"], self.dag.default_args)
-        self.cwl_step = [step for step in self.cwlwf.steps if self.task_id in step.id][0]
+        self.cwl_step = [step for step in self.cwlwf.steps if self.task_id == step.id.split("#")[-1]][0]
 
         _logger.info('{0}: Running!'.format(self.task_id))
         _logger.debug('{0}: Running tool: \n{1}'.format(self.task_id,
