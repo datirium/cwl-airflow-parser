@@ -61,7 +61,7 @@ class CWLDAG(DAG):
 
         self.top_task = None
         self.bottom_task = None
-        self.cwlwf = self.load_cwl(cwl_workflow)
+        self.cwlwf = self.quick_load_cwl(cwl_workflow)
 
         kwargs.update({"on_failure_callback": kwargs.get("on_failure_callback", post_status_info),
                        "on_success_callback": kwargs.get("on_success_callback", post_status_info)})
@@ -90,7 +90,7 @@ class CWLDAG(DAG):
                                              default_args=merged_default_args,
                                              schedule_interval=schedule_interval, *args, **kwargs)
 
-    def load_cwl(self, cwl_file):
+    def quick_load_cwl(self, cwl_file):
         with open(cwl_file, "r") as input_stream:
             cwl_data = yaml.round_trip_load(input_stream, preserve_quotes=True)
         return cwl_data
