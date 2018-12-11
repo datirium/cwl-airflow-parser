@@ -6,11 +6,8 @@
 
 * [Posting status updates](#posting-status-updates)
 * [Triggering DAGs through API](#triggering-dags-through-api)
-  * [Without encryption](#without-encryption)
-  * [With encryption](#with-encryption)
-* [Make triggering DAGs faster](#make-triggering-dags-faster)
+* [Check JWT signature when triggering DAG](#check-jwt-signature-when-triggering-dag)
 * [Stopping DagRun](#stopping-dagrun)
-
 ---
 
 ### Posting status updates
@@ -19,126 +16,134 @@
     - Conn Type `HTTP`
     - Host `localhost` or any other
     - Port `80` or any other
-    - Extra `{"endpoint": "satellite/v1/"` or any other
+    - Extra `{"endpoint": "satellite/v1/"}` or any other
     
     ![Adding new connection](https://raw.githubusercontent.com/michael-kotliar/cwl-airflow-parser/master/docs/connection.png)
     
-2. Enable encryption (if necessary)
+2. If JWT signature is required
     - Add Variables
         - `process_report_private_key`
-        - `process_report_crypt_algorithm`
+        - `process_report_algorithm`
     
     ![Adding new variables](https://raw.githubusercontent.com/michael-kotliar/cwl-airflow-parser/master/docs/variables.png)
 
-3. Test posting the status updates
-   ```
-   python ./utils/server.py
-   ```
-   Script will listen to port `80` on `localhost` and try to decrypt data with hardcoded `public_key`
+   Note
+   - data is sent as
+       ```yaml
+       {"payload": data}
+       ```
+     where `data` is JWT token or JSON object (if JWT signature is not enabled)
 
-   Output example:
+3. Test posting status updates
+   ```
+   python ./utils/server.py [PORT]
+   ```
+   Script will listen to the port `8080` (by default) on `localhost` and try to verify data with hardcoded `public_key`
+
+   JSON object example:
    ```yaml
    {
-     "dag_id": "sleep_for_an_hour_cwl_docker",
-     "run_id": "RUN_ID",
-     "execution_date": "2018-12-07 19:57:41",
-     "start_date": "2018-12-07 19:57:41",
-     "end_date": "2018-12-07 20:57:58",
-     "state": "failed",
-     "tasks": [
-       {
-         "task_id": "CWLJobGatherer",
-         "start_date": "2018-12-07 20:57:54",
-         "end_date": "2018-12-07 20:57:56",
-         "state": "failed",
-         "try_number": 2,
-         "max_tries": 0
-       },
-       {
-         "task_id": "CWLJobDispatcher",
-         "start_date": "2018-12-07 19:57:46",
-         "end_date": "2018-12-07 19:57:48",
-         "state": "success",
-         "try_number": 2,
-         "max_tries": 0
-       },
-       {
-         "task_id": "sleep",
-         "start_date": "2018-12-07 19:57:52",
-         "end_date": "2018-12-07 20:57:52",
-         "state": "success",
-         "try_number": 2,
-         "max_tries": 0
-       }
-     ]
+     "payload": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJkYWdfaWQiOiJzbGVlcF9mb3JfYW5faG91cl9jd2xfZG9ja2VyIiwicnVuX2lkIjoicnVuXzQiLCJleGVjdXRpb25fZGF0ZSI6IjIwMTgtMTItMTEgMTc6MzA6MTAiLCJzdGFydF9kYXRlIjoiMjAxOC0xMi0xMSAxNzozMDoxMCIsImVuZF9kYXRlIjpudWxsLCJzdGF0ZSI6InJ1bm5pbmciLCJ0YXNrcyI6W3sidGFza19pZCI6IkNXTEpvYkRpc3BhdGNoZXIiLCJzdGFydF9kYXRlIjoiMjAxOC0xMi0xMSAxNzozMDoxMiIsImVuZF9kYXRlIjpudWxsLCJzdGF0ZSI6InJ1bm5pbmciLCJ0cnlfbnVtYmVyIjoxLCJtYXhfdHJpZXMiOjB9LHsidGFza19pZCI6IkNXTEpvYkdhdGhlcmVyIiwic3RhcnRfZGF0ZSI6bnVsbCwiZW5kX2RhdGUiOm51bGwsInN0YXRlIjpudWxsLCJ0cnlfbnVtYmVyIjoxLCJtYXhfdHJpZXMiOjB9LHsidGFza19pZCI6InNsZWVwXzEiLCJzdGFydF9kYXRlIjpudWxsLCJlbmRfZGF0ZSI6bnVsbCwic3RhdGUiOm51bGwsInRyeV9udW1iZXIiOjEsIm1heF90cmllcyI6MH0seyJ0YXNrX2lkIjoic2xlZXBfMiIsInN0YXJ0X2RhdGUiOm51bGwsImVuZF9kYXRlIjpudWxsLCJzdGF0ZSI6bnVsbCwidHJ5X251bWJlciI6MSwibWF4X3RyaWVzIjowfSx7InRhc2tfaWQiOiJzbGVlcF8zIiwic3RhcnRfZGF0ZSI6bnVsbCwiZW5kX2RhdGUiOm51bGwsInN0YXRlIjpudWxsLCJ0cnlfbnVtYmVyIjoxLCJtYXhfdHJpZXMiOjB9LHsidGFza19pZCI6InNsZWVwXzQiLCJzdGFydF9kYXRlIjpudWxsLCJlbmRfZGF0ZSI6bnVsbCwic3RhdGUiOm51bGwsInRyeV9udW1iZXIiOjEsIm1heF90cmllcyI6MH0seyJ0YXNrX2lkIjoic2xlZXBfNSIsInN0YXJ0X2RhdGUiOm51bGwsImVuZF9kYXRlIjpudWxsLCJzdGF0ZSI6bnVsbCwidHJ5X251bWJlciI6MSwibWF4X3RyaWVzIjowfSx7InRhc2tfaWQiOiJzbGVlcF82Iiwic3RhcnRfZGF0ZSI6bnVsbCwiZW5kX2RhdGUiOm51bGwsInN0YXRlIjpudWxsLCJ0cnlfbnVtYmVyIjoxLCJtYXhfdHJpZXMiOjB9XX0.dI4TPzGyZdUkCct5EfKurJKRbQ-RXTI8NT4ZHKA47hUYep1rR8hnnGX0GsSK-UWTqGKNDHnGYAR2jVqgH0_AJVIAEZLPqBQZ_oxxddvhb-_vuwy72pCdC4mA2EYVlrdA6nNmplwEJ2u4eLAy9OKN6RuI83PIRuPrH8cXMZRjC-A"
+   }
+   ```
+   or its decoded version
+   ```yaml
+   {
+     "payload": {
+       "dag_id": "sleep_for_an_hour_cwl_docker",
+       "run_id": "run_3",
+       "execution_date": "2018-12-11 17:25:40",
+       "start_date": "2018-12-11 17:25:40",
+       "end_date": null,
+       "state": "running",
+       "tasks": [{
+           "task_id": "CWLJobDispatcher",
+           "start_date": "2018-12-11 17:25:42",
+           "end_date": "2018-12-11 17:25:45",
+           "state": "success",
+           "try_number": 2,
+           "max_tries": 0
+         },
+         {
+           "task_id": "CWLJobGatherer",
+           "start_date": null,
+           "end_date": null,
+           "state": null,
+           "try_number": 1,
+           "max_tries": 0
+         },
+         {
+           "task_id": "sleep_1",
+           "start_date": "2018-12-11 17:25:48",
+           "end_date": "2018-12-11 17:26:01",
+           "state": "success",
+           "try_number": 2,
+           "max_tries": 0
+         }
+       ]
+     }
    }
    ```
 
 ### Triggering DAGs through API
-##### Without encryption
 1. Run `airflow webserver`
-2. Test triggering DAGs through API (set correct `DAG_ID` and `RUN_ID`)
-   ```
-   curl --header "Content-Type: application/json" \
-        --request POST \
-        --data '{"run_id":"RUN_ID","conf":"{\"job\":{\"output_folder\":\"/your/output/folder\"}}"}' \
-        http://localhost:8080/api/experimental/dags/{DAG_ID}/dag_runs
-   ```
-
-##### With encryption
+2. Trigger DAG through API
+   - Using `curl`
+     Test triggering DAGs through API (set correct `DAG_ID` and `RUN_ID`)
+     ```
+     curl --header "Content-Type: application/json" \
+          --request POST \
+          --data '{"run_id":"RUN_ID","conf":"{\"job\":{\"output_folder\":\"/your/output/folder\"}}"}' \
+          http://localhost:8080/api/experimental/dags/{DAG_ID}/dag_runs
+     ```
+   - Using `trigger.py`
+     ```bash
+     python ./utils/trigger.py -d DAG_ID -r RUN_ID -c "{\"job\":{\"output_folder\":\"/your/output/folder\"}}"
+     ```
+     
+     Script will try to post JSON data to the following URL (by default)
+     `http://localhost:8080/api/experimental/dags/{DAG_ID}/dag_runs`
+   
+     JSON data have the following structure
+     ```yaml
+     json_data = {
+          "run_id": RUN_ID,
+          "conf": "{\"job\":{\"output_folder\":\"/your/output/folder\"}}"
+          "token": "jwt token"
+     }
+     ```
+     Where `token` is generated by JWT from the object that includes only `run_id` and `conf` fields
+     using hardcoded `private_key` and `RS256` algorithm (by default)
+    
+### Check JWT signature when triggering DAG
 1. Update `airflow.cfg`
    ```
    auth_backend = cwl_airflow_parser.utils.jwt_backend
    ```
 2. Add Variables
     - `jwt_backend_public_key`
-    - `jwt_backend_crypt_algorithm`
+    - `jwt_backend_algorithm`
+3. Test trigger DAG through API (using `trigger.py`)
 
-3. Run `airflow webserver`
-
-4. Test triggering DAGs through API
-   ```bash
-   python ./utils/trigger.py -d DAG_ID -r RUN_ID -c "{\"job\":{\"output_folder\":\"/your/output/folder\"}}"
-   ```
-   Script will try to post JSON data to the following URL
-   `http://localhost:8080/api/experimental/dags/{DAG_ID}/dag_runs` (default URL)
-   
-   JSON data have the following structure
-   ```yaml
-   json_data = {
-        "run_id": RUN_ID,
-        "conf": "{\"job\":{\"output_folder\":\"/your/output/folder\"}}"
-        "check_payload": "encoded string"
-   }
-   ```
-   Where `check_payload` is an encrypted object that includes only `run_id` and `conf` fields
-   
-   
-### Make triggering DAGs faster
-1. Update `airflow.cfg`
-   ```bash
-   api_client = airflow.api.client.json_client
-   ```
-   
-   `json_client` will allow to trigger dag through POST to `endpoint_url` instead of parsing all the DAGs from dags folder and
-    updating DB directly.
-    
-    Note
-    - `airflow webserver` should be running
-    - it won't work in combination with `auth_backend = cwl_airflow_parser.utils.jwt_backend`
- 
  
 ### Stopping DagRun 
 1. Copy `./utils/dags/clean_dag_run.py` into the dag folder
 2. Trigger `clean_dag_run` with `remove_dag_id` and `remove_run_id` parameters set in `--conf`
    ```bash
-   python3.6 ./utils/trigger.py -d clean_dag_run -r RUN_ID -c "{\"remove_dag_id\":\"some_dag_id\", \"remove_run_id\":\"some_run_id\"}"
+   airflow trigger_dag -r RUN_ID -c "{\"remove_dag_id\":\"some_dag_id\", \"remove_run_id\":\"some_run_id\"}" clean_dag_run
    ```
    or
    ```bash
-   airflow trigger_dag -r RUN_ID -c "{\"remove_dag_id\":\"some_dag_id\", \"remove_run_id\":\"some_run_id\"}" clean_dag_run
+   curl --header "Content-Type: application/json" \
+        --request POST \
+        --data '{"run_id":"RUN_ID","conf":"{\"remove_dag_id\":\"some_dag_id\", \"remove_run_id\":\"some_run_id\"}"}' \
+        http://localhost:8080/api/experimental/dags/clean_dag_run/dag_runs
    ```
-   
+   or (in case using JWT singature)
+   ```bash
+   python3.6 ./utils/trigger.py -d clean_dag_run -r RUN_ID -c "{\"remove_dag_id\":\"some_dag_id\", \"remove_run_id\":\"some_run_id\"}"
+   ```
+  
    Note
    - `clean_dag_run` will indicate successfull execution in case
         - `remove_dag_id` & `remove_run_id` are not found in DB

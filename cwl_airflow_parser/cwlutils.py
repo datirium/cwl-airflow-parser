@@ -27,6 +27,7 @@
 
 import jwt
 import requests
+import cwltool.load_tool as load
 from cwltool.context import LoadingContext
 from airflow.configuration import conf
 from airflow.exceptions import AirflowConfigException
@@ -35,6 +36,8 @@ from airflow.utils.state import State
 from airflow.hooks.http_hook import HttpHook
 from cwltool.load_tool import (FetcherConstructorType, resolve_tool_uri,
                                fetch_document, make_tool, validate_document)
+from cwltool.resolver import tool_resolver
+from cwltool.workflow import default_make_tool
 
 
 def flatten(input_list):
@@ -87,11 +90,19 @@ def load_tool(argsworkflow,  # type: Union[Text, Dict[Text, Any]]
                      LoadingContext())
 
 
+def load_cwl(cwl_file, default_args):
+    load.loaders = {}
+    loading_context = LoadingContext(default_args)
+    loading_context.construct_tool_object = default_make_tool
+    loading_context.resolver = tool_resolver
+    return load.load_tool(cwl_file, loading_context)
+
+
 def post_status_info(context):
     CONN_ID = "process_report"
     ROUTE = "status"
-    CRYPT_PRIVATE_KEY = "process_report_private_key"
-    CRYPT_ALGORITHM = "process_report_crypt_algorithm"
+    PRIVATE_KEY = "process_report_private_key"
+    ALGORITHM = "process_report_algorithm"
 
     try:
         # Checking connection
@@ -132,11 +143,11 @@ def post_status_info(context):
             except Exception as ex:
                 print("Failed to collect results\n", ex)
 
-        # Try to encode data if CRYPT_PRIVATE_KEY is set in Variable
+        # Try to sign data if PRIVATE_KEY and ALGORITHM are set in Variable
         try:
-            data = jwt.encode(data, Variable.get(CRYPT_PRIVATE_KEY), algorithm=Variable.get(CRYPT_ALGORITHM)).decode("utf-8")
+            data = jwt.encode(data, Variable.get(PRIVATE_KEY), algorithm=Variable.get(ALGORITHM)).decode("utf-8")
         except Exception as e:
-            print("Failed to encrypt status data:\n", e)
+            print("Failed to sign status data:\n", e)
 
         # Posting results
         prepped_request = session.prepare_request(requests.Request("POST", url, json={"payload": data}))
