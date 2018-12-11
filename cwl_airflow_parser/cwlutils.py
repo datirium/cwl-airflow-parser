@@ -129,6 +129,11 @@ def post_status_info(context):
                                   "try_number": ti.try_number,
                                   "max_tries": ti.max_tries})
 
+        # Add basic info
+        data["title"] = data["state"]
+        data["progress"] = int(len([task for task in data["tasks"] if task["state"] == State.SUCCESS]) / len(data["tasks"]) * 100)
+        data["error"] = context["reason"] if data["state"] == State.FAILED else ""
+
         # Add DagRun results
         #   Results should be collected only from CWLJobGatherer class or any other class that inherits from it.
         #   Optimal solution would be to check ifinstance(ti, CWLJobGatherer), but unless code in cwlutils.py is
