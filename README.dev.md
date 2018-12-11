@@ -46,7 +46,7 @@
        "title":           # one of ["success", "running", "failed"] #
        "progress":        # int from 0 to 100 percent               #
        "error":           # if not "", then includes the reason of  #
-                          # the failure as a string                     #
+                          # the failure as a string                 #
                           ###########################################
        
        #####################
