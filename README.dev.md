@@ -6,11 +6,8 @@
 
 * [Posting status updates](#posting-status-updates)
 * [Triggering DAGs through API](#triggering-dags-through-api)
-  * [Without encryption](#without-encryption)
-  * [With encryption](#with-encryption)
-* [Make triggering DAGs faster](#make-triggering-dags-faster)
+* [Check JWT signature when triggering DAG](#check-jwt-signature-when-triggering-dag)
 * [Stopping DagRun](#stopping-dagrun)
-
 ---
 
 ### Posting status updates
@@ -44,7 +41,7 @@
    Script will listen to the port `8080` (by default) on `localhost` and try to verify data with hardcoded `public_key`
 
    JSON object example:
-      ```yaml
+   ```yaml
    {
      "payload": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJkYWdfaWQiOiJzbGVlcF9mb3JfYW5faG91cl9jd2xfZG9ja2VyIiwicnVuX2lkIjoicnVuXzQiLCJleGVjdXRpb25fZGF0ZSI6IjIwMTgtMTItMTEgMTc6MzA6MTAiLCJzdGFydF9kYXRlIjoiMjAxOC0xMi0xMSAxNzozMDoxMCIsImVuZF9kYXRlIjpudWxsLCJzdGF0ZSI6InJ1bm5pbmciLCJ0YXNrcyI6W3sidGFza19pZCI6IkNXTEpvYkRpc3BhdGNoZXIiLCJzdGFydF9kYXRlIjoiMjAxOC0xMi0xMSAxNzozMDoxMiIsImVuZF9kYXRlIjpudWxsLCJzdGF0ZSI6InJ1bm5pbmciLCJ0cnlfbnVtYmVyIjoxLCJtYXhfdHJpZXMiOjB9LHsidGFza19pZCI6IkNXTEpvYkdhdGhlcmVyIiwic3RhcnRfZGF0ZSI6bnVsbCwiZW5kX2RhdGUiOm51bGwsInN0YXRlIjpudWxsLCJ0cnlfbnVtYmVyIjoxLCJtYXhfdHJpZXMiOjB9LHsidGFza19pZCI6InNsZWVwXzEiLCJzdGFydF9kYXRlIjpudWxsLCJlbmRfZGF0ZSI6bnVsbCwic3RhdGUiOm51bGwsInRyeV9udW1iZXIiOjEsIm1heF90cmllcyI6MH0seyJ0YXNrX2lkIjoic2xlZXBfMiIsInN0YXJ0X2RhdGUiOm51bGwsImVuZF9kYXRlIjpudWxsLCJzdGF0ZSI6bnVsbCwidHJ5X251bWJlciI6MSwibWF4X3RyaWVzIjowfSx7InRhc2tfaWQiOiJzbGVlcF8zIiwic3RhcnRfZGF0ZSI6bnVsbCwiZW5kX2RhdGUiOm51bGwsInN0YXRlIjpudWxsLCJ0cnlfbnVtYmVyIjoxLCJtYXhfdHJpZXMiOjB9LHsidGFza19pZCI6InNsZWVwXzQiLCJzdGFydF9kYXRlIjpudWxsLCJlbmRfZGF0ZSI6bnVsbCwic3RhdGUiOm51bGwsInRyeV9udW1iZXIiOjEsIm1heF90cmllcyI6MH0seyJ0YXNrX2lkIjoic2xlZXBfNSIsInN0YXJ0X2RhdGUiOm51bGwsImVuZF9kYXRlIjpudWxsLCJzdGF0ZSI6bnVsbCwidHJ5X251bWJlciI6MSwibWF4X3RyaWVzIjowfSx7InRhc2tfaWQiOiJzbGVlcF82Iiwic3RhcnRfZGF0ZSI6bnVsbCwiZW5kX2RhdGUiOm51bGwsInN0YXRlIjpudWxsLCJ0cnlfbnVtYmVyIjoxLCJtYXhfdHJpZXMiOjB9XX0.dI4TPzGyZdUkCct5EfKurJKRbQ-RXTI8NT4ZHKA47hUYep1rR8hnnGX0GsSK-UWTqGKNDHnGYAR2jVqgH0_AJVIAEZLPqBQZ_oxxddvhb-_vuwy72pCdC4mA2EYVlrdA6nNmplwEJ2u4eLAy9OKN6RuI83PIRuPrH8cXMZRjC-A"
    }
