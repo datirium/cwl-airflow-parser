@@ -88,6 +88,9 @@
    ```yaml
    {
      "payload": {
+       "title": "running",
+       "progress": 66,
+       "error": "",
        "dag_id": "sleep_for_an_hour_cwl_docker",
        "run_id": "run_3",
        "execution_date": "2018-12-11 17:25:40",
