@@ -59,7 +59,7 @@
        "execution_date":  # string                                  #
        "start_date":      # string or null                          #
        "end_date":        # string or null                          #
-       "state": String,   # one of ["success", "running", "failed"] #
+       "state":           # one of ["success", "running", "failed"] #
                           ###########################################
                                   
        "tasks": [{        ###########################################
