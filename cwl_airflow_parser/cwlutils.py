@@ -101,8 +101,8 @@ def load_cwl(cwl_file, default_args):
 def post_status_info(context):
     CONN_ID = "process_report"
     ROUTE = "status"
-    CRYPT_PRIVATE_KEY = "process_report_private_key"
-    CRYPT_ALGORITHM = "process_report_crypt_algorithm"
+    PRIVATE_KEY = "process_report_private_key"
+    ALGORITHM = "process_report_algorithm"
 
     try:
         # Checking connection
@@ -143,11 +143,11 @@ def post_status_info(context):
             except Exception as ex:
                 print("Failed to collect results\n", ex)
 
-        # Try to encode data if CRYPT_PRIVATE_KEY is set in Variable
+        # Try to sign data if PRIVATE_KEY and ALGORITHM are set in Variable
         try:
-            data = jwt.encode(data, Variable.get(CRYPT_PRIVATE_KEY), algorithm=Variable.get(CRYPT_ALGORITHM)).decode("utf-8")
+            data = jwt.encode(data, Variable.get(PRIVATE_KEY), algorithm=Variable.get(ALGORITHM)).decode("utf-8")
         except Exception as e:
-            print("Failed to encrypt status data:\n", e)
+            print("Failed to sign status data:\n", e)
 
         # Posting results
         prepped_request = session.prepare_request(requests.Request("POST", url, json={"payload": data}))

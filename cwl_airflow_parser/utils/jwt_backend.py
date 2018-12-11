@@ -4,10 +4,6 @@ from flask import request, Response
 from airflow.models import Variable
 
 
-JWT_BACKEND_PUBLIC_KEY = "jwt_backend_public_key"
-JWT_BACKEND_CRYPT_ALGORITHM = "jwt_backend_crypt_algorithm"
-
-
 client_auth = None
 
 
@@ -18,11 +14,13 @@ def init_app(app):
 def requires_authentication(function):
     @wraps(function)
     def decorated(*args, **kwargs):
+        PUBLIC_KEY = "jwt_backend_public_key"
+        ALGORITHM = "jwt_backend_algorithm"
         try:
-            json_data = {k: v for k, v in request.get_json(force=True).copy().items() if k != "check_payload"}
-            check_payload = jwt.decode(request.get_json(force=True)["check_payload"], Variable.get(JWT_BACKEND_PUBLIC_KEY), algorithms=Variable.get(JWT_BACKEND_CRYPT_ALGORITHM))
-            assert (json_data == check_payload)
+            json_data = {k: v for k, v in request.get_json(force=True).copy().items() if k != "token"}
+            decoded_token = jwt.decode(request.get_json(force=True)["token"], Variable.get(PUBLIC_KEY), algorithms=Variable.get(ALGORITHM))
+            assert (json_data == decoded_token)
         except Exception:
-            return Response("Failed to decrypt or data is corrupted", 403)
+            return Response("Failed to verify data", 403)
         return function(*args, **kwargs)
     return decorated
