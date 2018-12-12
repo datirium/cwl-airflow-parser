@@ -1,9 +1,13 @@
+import sys
 import jwt
 import socketserver
 from http.server import SimpleHTTPRequestHandler
 from json import dumps, loads
 
-PORT = 80
+try:
+    PORT = int(sys.argv[1])
+except Exception:
+    PORT = 8080
 
 public_key = b"""-----BEGIN PUBLIC KEY-----
 MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDdlatRjRjogo3WojgGHFHYLugd
@@ -36,13 +40,14 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_response(200)
         self.end_headers()
         headers = self.headers
-        payload = loads(self.rfile.read(int(self.headers['Content-Length'])).decode("UTF-8"))["payload"]
+        data = loads(self.rfile.read(int(self.headers['Content-Length'])).decode("UTF-8"))
         try:
-            payload = jwt.decode(payload.encode("utf-8"), public_key, algorithms='RS256')
+            data["payload"] = jwt.decode(data["payload"].encode("utf-8"), public_key, algorithms='RS256')
         except Exception:
-            print("\nFailed to decrypt of it wasn't necessary\n")
-        print("\nHeaders:\n", headers, "\nPayload\n", dumps(payload, indent=4))
+            print("\nFailed to check signature of it wasn't necessary\n")
+        print("\nHeaders:\n", headers, "\nData\n", dumps(data, indent=4))
 
+print("Listening on PORT", PORT)
 
 httpd = socketserver.TCPServer(("", PORT), Handler)
 httpd.serve_forever()
