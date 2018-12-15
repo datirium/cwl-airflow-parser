@@ -85,12 +85,11 @@ class CWLStepOperator(BaseOperator):
 
 
     def execute(self, context):
-        self.cwlwf = load_cwl(self.dag.default_args["cwl_workflow"], self.dag.default_args)
-        self.cwl_step = [step for step in self.cwlwf.steps if self.task_id == step.id.split("#")[-1]][0]
+
+        self.cwlwf, it_is_workflow = load_cwl(self.dag.default_args["cwl_workflow"], self.dag.default_args)
+        self.cwl_step = [step for step in self.cwlwf.steps if self.task_id == step.id.split("#")[-1]][0] if it_is_workflow else self.cwlwf
 
         _logger.info('{0}: Running!'.format(self.task_id))
-        _logger.debug('{0}: Running tool: \n{1}'.format(self.task_id,
-                                                        json.dumps(self.cwl_step.embedded_tool.tool, indent=4)))
 
         upstream_task_ids = [t.task_id for t in self.upstream_list] + \
                             ([self.reader_task_id] if self.reader_task_id else [])
@@ -200,7 +199,7 @@ class CWLStepOperator(BaseOperator):
 
         _stderr = sys.stderr
         sys.stderr = sys.__stderr__
-        (output, status) = executor(self.cwl_step.embedded_tool,
+        (output, status) = executor(self.cwl_step.embedded_tool if it_is_workflow else self.cwl_step,
                                     job,
                                     runtimeContext,
                                     logger=_logger)

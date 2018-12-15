@@ -95,7 +95,9 @@ def load_cwl(cwl_file, default_args):
     loading_context = LoadingContext(default_args)
     loading_context.construct_tool_object = default_make_tool
     loading_context.resolver = tool_resolver
-    return load.load_tool(cwl_file, loading_context)
+    tool = load.load_tool(cwl_file, loading_context)
+    it_is_workflow = tool.tool["class"] == "Workflow"
+    return tool, it_is_workflow
 
 
 def post_status_info(context):

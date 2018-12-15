@@ -96,38 +96,43 @@ class CWLDAG(DAG):
         return cwl_data
 
     def create(self):
-        outputs = {}
-
-        for step_id, step_val in self.cwlwf["steps"].items():
-            cwl_task = CWLStepOperator(task_id=step_id,
+        if self.cwlwf["class"] == "CommandLineTool":
+            cwl_task = CWLStepOperator(task_id=self.dag_id,
                                        dag=self,
                                        ui_color='#5C6BC0')
-            outputs[step_id] = cwl_task
+        else:
+            outputs = {}
 
-            for out in step_val["out"]:
-                outputs["/".join([step_id, out])] = cwl_task
+            for step_id, step_val in self.cwlwf["steps"].items():
+                cwl_task = CWLStepOperator(task_id=step_id,
+                                           dag=self,
+                                           ui_color='#5C6BC0')
+                outputs[step_id] = cwl_task
 
-        for step_id, step_val in self.cwlwf["steps"].items():
-            current_task = outputs[step_id]
-            if not step_val["in"]:  # need to check it, because in can be set as []
-                continue
-            for inp_id, inp_val in step_val["in"].items():
-                if isinstance(inp_val, list):
-                    step_input_sources = inp_val
-                elif isinstance(inp_val, str):
-                    step_input_sources = [inp_val]
-                elif isinstance(inp_val, dict) and "source" in inp_val:
-                    if isinstance(inp_val["source"], list):
-                        step_input_sources = inp_val["source"]
+                for out in step_val["out"]:
+                    outputs["/".join([step_id, out])] = cwl_task
+
+            for step_id, step_val in self.cwlwf["steps"].items():
+                current_task = outputs[step_id]
+                if not step_val["in"]:  # need to check it, because in can be set as []
+                    continue
+                for inp_id, inp_val in step_val["in"].items():
+                    if isinstance(inp_val, list):
+                        step_input_sources = inp_val
+                    elif isinstance(inp_val, str):
+                        step_input_sources = [inp_val]
+                    elif isinstance(inp_val, dict) and "source" in inp_val:
+                        if isinstance(inp_val["source"], list):
+                            step_input_sources = inp_val["source"]
+                        else:
+                            step_input_sources = [inp_val["source"]]
                     else:
-                        step_input_sources = [inp_val["source"]]
-                else:
-                    step_input_sources = []
+                        step_input_sources = []
 
-                for source in step_input_sources:
-                    parent_task = outputs.get(source, None)
-                    if parent_task and parent_task not in current_task.upstream_list:
-                        current_task.set_upstream(parent_task)
+                    for source in step_input_sources:
+                        parent_task = outputs.get(source, None)
+                        if parent_task and parent_task not in current_task.upstream_list:
+                            current_task.set_upstream(parent_task)
 
         # https://material.io/guidelines/style/color.html#color-color-palette
         for t in self.tasks:
