@@ -160,6 +160,11 @@ class CWLDAG(DAG):
                     t.reader_task_id = self.top_task.task_id
 
     def get_output_list(self):
-        outputs = {out_val["outputSource"]: out_id for out_id, out_val in self.cwlwf["outputs"].items() if "outputSource" in out_val}
+        outputs = {}
+        for out_id, out_val in self.cwlwf["outputs"].items():
+            if "outputSource" in out_val:
+                outputs[out_val["outputSource"]] = out_id
+            else:
+                outputs[out_id] = out_id
         _logger.debug("{0} get_output_list: \n{1}".format(self.dag_id, outputs))
         return outputs
