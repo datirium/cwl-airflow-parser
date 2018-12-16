@@ -123,10 +123,9 @@ class CWLStepOperator(BaseOperator):
             jobobj_id = shortname(inp["id"]).split("/")[-1]
             source_ids = []
             promises_outputs = []
+            source_field = inp["source"] if it_is_workflow else inp.get("id")
             try:
-                source_ids = [shortname(source) for source in inp["source"]] \
-                    if isinstance(inp["source"], list) else [shortname(inp["source"])]
-
+                source_ids = [shortname(s) for s in source_field] if isinstance(source_field, list) else [shortname(source_field)]
                 promises_outputs = [promises[source_id] for source_id in source_ids if source_id in promises]
             except:
                 _logger.warning("{0}: Couldn't find source field in step input: {1}"
