@@ -96,7 +96,7 @@ class CWLDAG(DAG):
         return cwl_data
 
     def create(self):
-        if self.cwlwf["class"] == "CommandLineTool":
+        if self.cwlwf["class"] in ["CommandLineTool", "ExpressionTool"]:
             cwl_task = CWLStepOperator(task_id=self.dag_id,
                                        dag=self,
                                        ui_color='#5C6BC0')
