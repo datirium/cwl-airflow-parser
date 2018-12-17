@@ -66,7 +66,7 @@ class CWLJobDispatcher(BaseOperator):
 
     def cwl_dispatch(self, json):
         try:
-            cwlwf = load_cwl(self.dag.default_args["cwl_workflow"], self.dag.default_args)
+            cwlwf, it_is_workflow = load_cwl(self.dag.default_args["cwl_workflow"], self.dag.default_args)
             cwl_context = {
                 "outdir": mkdtemp(
                     prefix=os.path.abspath(os.path.join(self.tmp_folder, 'dag_tmp_')))

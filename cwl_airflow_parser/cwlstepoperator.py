@@ -85,12 +85,11 @@ class CWLStepOperator(BaseOperator):
 
 
     def execute(self, context):
-        self.cwlwf = load_cwl(self.dag.default_args["cwl_workflow"], self.dag.default_args)
-        self.cwl_step = [step for step in self.cwlwf.steps if self.task_id == step.id.split("#")[-1]][0]
+
+        self.cwlwf, it_is_workflow = load_cwl(self.dag.default_args["cwl_workflow"], self.dag.default_args)
+        self.cwl_step = [step for step in self.cwlwf.steps if self.task_id == step.id.split("#")[-1]][0] if it_is_workflow else self.cwlwf
 
         _logger.info('{0}: Running!'.format(self.task_id))
-        _logger.debug('{0}: Running tool: \n{1}'.format(self.task_id,
-                                                        json.dumps(self.cwl_step.embedded_tool.tool, indent=4)))
 
         upstream_task_ids = [t.task_id for t in self.upstream_list] + \
                             ([self.reader_task_id] if self.reader_task_id else [])
@@ -125,9 +124,8 @@ class CWLStepOperator(BaseOperator):
             source_ids = []
             promises_outputs = []
             try:
-                source_ids = [shortname(source) for source in inp["source"]] \
-                    if isinstance(inp["source"], list) else [shortname(inp["source"])]
-
+                source_field = inp["source"] if it_is_workflow else inp.get("id")
+                source_ids = [shortname(s) for s in source_field] if isinstance(source_field, list) else [shortname(source_field)]
                 promises_outputs = [promises[source_id] for source_id in source_ids if source_id in promises]
             except:
                 _logger.warning("{0}: Couldn't find source field in step input: {1}"
@@ -200,7 +198,7 @@ class CWLStepOperator(BaseOperator):
 
         _stderr = sys.stderr
         sys.stderr = sys.__stderr__
-        (output, status) = executor(self.cwl_step.embedded_tool,
+        (output, status) = executor(self.cwl_step.embedded_tool if it_is_workflow else self.cwl_step,
                                     job,
                                     runtimeContext,
                                     logger=_logger)

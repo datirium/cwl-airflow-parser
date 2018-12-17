@@ -11,4 +11,4 @@ def cwl_workflow(workflow_file):
     dag.add(CWLJobGatherer(dag=dag), to='bottom')
     return dag
 
-dag = cwl_workflow(os.path.join(DIR, "sleep_for_an_hour_cwl_docker.cwl"))
+dag = cwl_workflow(os.path.join(DIR, "sleep_cwl_workflow.cwl"))

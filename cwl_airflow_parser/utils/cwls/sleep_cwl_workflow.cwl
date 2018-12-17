@@ -5,7 +5,7 @@ cwlVersion: v1.0
 inputs:
   delay:
     type: int
-    default: 600
+    default: 5
 
 
 outputs:
