@@ -86,7 +86,8 @@ setup(
         'ruamel.yaml <= 0.15.51',
         'sqlparse',
         'apache-airflow >= 1.10.0, < 1.11',
-        'apache-airflow[mysql]'
+        'apache-airflow[mysql]',
+        'pyjwt'
     ],
     zip_safe=False,
     cmdclass={'egg_info': tagger},
