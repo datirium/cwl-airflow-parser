@@ -69,7 +69,7 @@ tagger = EggInfoFromGit
 setup(
     name='cwl-airflow-parser',
     description='Package extends Airflow functionality with CWL v1.0 support',
-    long_description=open(README).read(),
+    long_description=open(README, 'r+', encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     version='1.0',
     url='https://github.com/datirium/cwl-airflow-parser',
@@ -81,11 +81,11 @@ setup(
     install_requires=[
         'setuptools',
         'cryptography',
-        'cwltool == 1.0.20180912090223',
+        'cwltool == 1.0.20181201184214',
         'jsonmerge',
-        'ruamel.yaml <= 0.15.51',
+        'ruamel.yaml <= 0.15.77',
         'sqlparse',
-        'apache-airflow >= 1.10.0, < 1.11',
+        'apache-airflow >= 1.10.1, < 1.11',
         'apache-airflow[mysql]',
         'pyjwt'
     ],
