@@ -8,6 +8,7 @@
 * [Triggering DAGs through API](#triggering-dags-through-api)
 * [Check JWT signature when triggering DAG](#check-jwt-signature-when-triggering-dag)
 * [Stopping DagRun](#stopping-dagrun)
+* [CI with Travis](#ci-with-travis)
 ---
 
 ### Posting status updates
@@ -196,4 +197,12 @@
         we waited to long for scheduler to kill their PIDs. Timeout is equal to `2 * KILLED_TASK_CLEANUP_TIME` from
         `airflow.cfg`
    - `clean_dag_run` doesn't know if any of the tasks' PID children are stopped too 
-        
+
+### CI with Travis
+1. Experimental `.travis.yml` configuration file has the following structure
+   - runs two jobs separately (see `env`) with different tests to run (see `NTEST`)
+   - to use `LocalExecutor` mysql-server is started in docker
+   - `airflow.cfg` is updated to unpause all dags
+   - `scheduler` and `webserver` are started in background
+   - `cwl-airflow-tester` is run with `-s` argument to display spinner and prevent
+     Travis from killing the job after being idle for more than 10 min
