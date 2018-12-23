@@ -178,8 +178,8 @@ class CWLStepOperator(BaseOperator):
         _logger.info('{0}: Final job data: \n {1}'.format(self.task_id, json.dumps(job, indent=4)))
 
         _d_args['outdir'] = tempfile.mkdtemp(prefix=os.path.join(self.outdir, "step_tmp"))
-        _d_args['tmpdir_prefix'] = _d_args['tmpdir_prefix'] if _d_args.get('tmpdir_prefix') else os.path.join(_d_args['outdir'], 'cwl_tmp_')
-        _d_args['tmp_outdir_prefix'] = _d_args['tmp_outdir_prefix'] if _d_args.get('tmp_outdir_prefix') else os.path.join(_d_args['outdir'], 'cwl_outdir_')
+        _d_args['tmpdir_prefix'] = os.path.join(_d_args['outdir'], 'cwl_tmp_')
+        _d_args['tmp_outdir_prefix'] = os.path.join(_d_args['outdir'], 'cwl_outdir_')
 
         _d_args["record_container_id"] = True
         _d_args["cidfile_dir"] = self.outdir
