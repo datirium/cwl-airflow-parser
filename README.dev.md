@@ -11,7 +11,33 @@
 * [CI with Travis](#ci-with-travis)
 ---
 
-### Posting status updates
+### Posting progress, task status and DagRun results
+
+Progress, task status and DagRun results are posted to the different rountes that are defined in
+ `./utils/notifier.py` as
+```
+ROUTES = {
+  "progress": "progress",
+  "results":  "results",
+  "status":   "status"
+}
+```
+
+    Progress is posted when:
+    - task finished successfully
+    - dag finished successfully
+    - dag failed
+
+    Task status is posted when:
+    - task started to run
+    - task finished successfully
+    - task failed
+    - task is set to retry
+
+    Results are posted when:
+    - dag finished successfully
+
+
 1. Add new Connection
     - Conn Id `process_report`
     - Conn Type `HTTP`
@@ -28,104 +54,56 @@
     
     ![Adding new variables](https://raw.githubusercontent.com/michael-kotliar/cwl-airflow-parser/master/docs/variables.png)
 
-3. Test posting status updates
+3. Test posting progress, task status and DagRun results
    ```
    python ./utils/server.py [PORT]
    ```
    Script will listen to the port `8080` (by default) on `localhost` and try to verify data with hardcoded `public_key`
 
 4. JSON object structure
+   
+   Progress
    ```yaml
    {
      "payload": {
-    
-       ################
-       # basic fields #
-       ################
-       
-                          ###########################################
-       "title":           # one of ["success", "running", "failed"] #
-       "progress":        # int from 0 to 100 percent               #
-       "error":           # if not "", then includes the reason of  #
-                          # the failure as a string                 #
-                          ###########################################
-       
-       #####################
-       # additional fields #
-       #####################
-                            
-                          ###########################################
-       "dag_id":          # string                                  # 
-       "run_id":          # string                                  #
-       "execution_date":  # string                                  #
-       "start_date":      # string or null                          #
-       "end_date":        # string or null                          #
-       "state":           # one of ["success", "running", "failed"] #
-                          ###########################################
-                                  
-       "tasks": [{        ###########################################
-           "task_id":     # string or null                          #
-           "start_date":  # string or null                          #
-           "end_date":    # string or null                          #
-           "state":       # one of ["success", "running", "failed", #
-                          #          "upstream_failed", "skipped",  #
-                          #          "up_for_retry", "queued",      #
-                          #          "scheduled"] or null           #
-           "try_number":  # int                                     #
-           "max_tries":   # int                                     #
-         }                ###########################################
-         ...
-       ]
+       "title":           # one of ["success", "running", "failed"]
+       "dag_id":          # string                                   
+       "run_id":          # string
+       "progress":        # int from 0 to 100 percent               
+       "error":           # if not "", then includes the reason of the failure as a string                 
+     }
+   }
+   ```      
+   Task status
+   ```yaml
+   {
+     "payload": {
+       "title":           # one of ["success", "running", "failed", "up_for_retry", "upstream_failed"]
+       "dag_id":          # string                                   
+       "run_id":          # string
+       "task_id":         # string               
      }
    }
    ```   
-   Example:
+
+   DagRun results
+   ```yaml
+   {
+     "payload": {
+       "dag_id":          # string                                   
+       "run_id":          # string
+       "results":         # JSON object to include outputs from CWL workflow               
+     }
+   }
+   ```   
+
+   When JWT signature is used, payload includes JWT token:
    ```yaml
    {
      "payload": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJkYWdfaWQiOiJzbGVlcF9mb3JfYW5faG91cl9jd2xfZG9ja2VyIiwicnVuX2lkIjoicnVuXzQiLCJleGVjdXRpb25fZGF0ZSI6IjIwMTgtMTItMTEgMTc6MzA6MTAiLCJzdGFydF9kYXRlIjoiMjAxOC0xMi0xMSAxNzozMDoxMCIsImVuZF9kYXRlIjpudWxsLCJzdGF0ZSI6InJ1bm5pbmciLCJ0YXNrcyI6W3sidGFza19pZCI6IkNXTEpvYkRpc3BhdGNoZXIiLCJzdGFydF9kYXRlIjoiMjAxOC0xMi0xMSAxNzozMDoxMiIsImVuZF9kYXRlIjpudWxsLCJzdGF0ZSI6InJ1bm5pbmciLCJ0cnlfbnVtYmVyIjoxLCJtYXhfdHJpZXMiOjB9LHsidGFza19pZCI6IkNXTEpvYkdhdGhlcmVyIiwic3RhcnRfZGF0ZSI6bnVsbCwiZW5kX2RhdGUiOm51bGwsInN0YXRlIjpudWxsLCJ0cnlfbnVtYmVyIjoxLCJtYXhfdHJpZXMiOjB9LHsidGFza19pZCI6InNsZWVwXzEiLCJzdGFydF9kYXRlIjpudWxsLCJlbmRfZGF0ZSI6bnVsbCwic3RhdGUiOm51bGwsInRyeV9udW1iZXIiOjEsIm1heF90cmllcyI6MH0seyJ0YXNrX2lkIjoic2xlZXBfMiIsInN0YXJ0X2RhdGUiOm51bGwsImVuZF9kYXRlIjpudWxsLCJzdGF0ZSI6bnVsbCwidHJ5X251bWJlciI6MSwibWF4X3RyaWVzIjowfSx7InRhc2tfaWQiOiJzbGVlcF8zIiwic3RhcnRfZGF0ZSI6bnVsbCwiZW5kX2RhdGUiOm51bGwsInN0YXRlIjpudWxsLCJ0cnlfbnVtYmVyIjoxLCJtYXhfdHJpZXMiOjB9LHsidGFza19pZCI6InNsZWVwXzQiLCJzdGFydF9kYXRlIjpudWxsLCJlbmRfZGF0ZSI6bnVsbCwic3RhdGUiOm51bGwsInRyeV9udW1iZXIiOjEsIm1heF90cmllcyI6MH0seyJ0YXNrX2lkIjoic2xlZXBfNSIsInN0YXJ0X2RhdGUiOm51bGwsImVuZF9kYXRlIjpudWxsLCJzdGF0ZSI6bnVsbCwidHJ5X251bWJlciI6MSwibWF4X3RyaWVzIjowfSx7InRhc2tfaWQiOiJzbGVlcF82Iiwic3RhcnRfZGF0ZSI6bnVsbCwiZW5kX2RhdGUiOm51bGwsInN0YXRlIjpudWxsLCJ0cnlfbnVtYmVyIjoxLCJtYXhfdHJpZXMiOjB9XX0.dI4TPzGyZdUkCct5EfKurJKRbQ-RXTI8NT4ZHKA47hUYep1rR8hnnGX0GsSK-UWTqGKNDHnGYAR2jVqgH0_AJVIAEZLPqBQZ_oxxddvhb-_vuwy72pCdC4mA2EYVlrdA6nNmplwEJ2u4eLAy9OKN6RuI83PIRuPrH8cXMZRjC-A"
    }
    ```
-   or its decoded version
-   ```yaml
-   {
-     "payload": {
-       "title": "running",
-       "progress": 66,
-       "error": "",
-       "dag_id": "sleep_for_an_hour_cwl_docker",
-       "run_id": "run_3",
-       "execution_date": "2018-12-11 17:25:40",
-       "start_date": "2018-12-11 17:25:40",
-       "end_date": null,
-       "state": "running",
-       "tasks": [{
-           "task_id": "CWLJobDispatcher",
-           "start_date": "2018-12-11 17:25:42",
-           "end_date": "2018-12-11 17:25:45",
-           "state": "success",
-           "try_number": 2,
-           "max_tries": 0
-         },
-         {
-           "task_id": "CWLJobGatherer",
-           "start_date": null,
-           "end_date": null,
-           "state": null,
-           "try_number": 1,
-           "max_tries": 0
-         },
-         {
-           "task_id": "sleep_1",
-           "start_date": "2018-12-11 17:25:48",
-           "end_date": "2018-12-11 17:26:01",
-           "state": "success",
-           "try_number": 2,
-           "max_tries": 0
-         }
-       ]
-     }
-   }
-   ```
+
 
 ### Triggering DAGs through API
 1. Run `airflow webserver`
