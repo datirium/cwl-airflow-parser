@@ -6,7 +6,7 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.utils.dates import days_ago
 from airflow.utils.db import provide_session
 from airflow.utils.state import State
-from cwl_airflow_parser.cwlutils import post_status_info
+from cwl_airflow_parser.utils.notifier import dag_on_success, dag_on_failure
 
 
 logger = logging.getLogger(__name__)
@@ -65,8 +65,8 @@ def clean_dag_run(**context):
 
 dag = DAG(dag_id="clean_dag_run",
           start_date=days_ago(1),
-          on_failure_callback=post_status_info,
-          on_success_callback=post_status_info,
+          on_failure_callback=dag_on_failure,
+          on_success_callback=dag_on_success,
           schedule_interval=None)
 
 

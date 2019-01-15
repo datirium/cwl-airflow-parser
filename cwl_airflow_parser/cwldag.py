@@ -37,7 +37,8 @@ from airflow.operators import BaseOperator
 from airflow.exceptions import AirflowException
 from airflow.utils.dates import days_ago
 from .cwlstepoperator import CWLStepOperator
-from .cwlutils import conf_get_default, shortname, post_status_info, load_tool
+from .cwlutils import conf_get_default
+from cwl_airflow_parser.utils.notifier import dag_on_success, dag_on_failure
 # logging.getLogger('cwltool').setLevel(conf_get_default('core', 'logging_level', 'ERROR').upper())
 # logging.getLogger('salad').setLevel(conf_get_default('core', 'logging_level', 'ERROR').upper())
 logging.getLogger('cwltool').setLevel(logging.ERROR)
@@ -63,8 +64,8 @@ class CWLDAG(DAG):
         self.bottom_task = None
         self.cwlwf = self.quick_load_cwl(cwl_workflow)
 
-        kwargs.update({"on_failure_callback": kwargs.get("on_failure_callback", post_status_info),
-                       "on_success_callback": kwargs.get("on_success_callback", post_status_info)})
+        kwargs.update({"on_failure_callback": kwargs.get("on_failure_callback", dag_on_failure),
+                       "on_success_callback": kwargs.get("on_success_callback", dag_on_success)})
 
         init_default_args = {
             'start_date': days_ago(14),

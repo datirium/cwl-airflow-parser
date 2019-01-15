@@ -35,7 +35,8 @@ import ruamel.yaml as yaml
 
 from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
-from ..cwlutils import post_status_info, load_cwl
+from ..cwlutils import load_cwl
+from cwl_airflow_parser.utils.notifier import task_on_success, task_on_failure, task_on_retry, post_status
 from cwltool.main import jobloaderctx, init_job_order
 
 _logger = logging.getLogger(__name__)
@@ -55,9 +56,9 @@ class CWLJobDispatcher(BaseOperator):
             *args, **kwargs):
         task_id = task_id if task_id else self.__class__.__name__
 
-        kwargs.update({"on_failure_callback": kwargs.get("on_failure_callback", post_status_info),
-                       "on_retry_callback":   kwargs.get("on_retry_callback", post_status_info),
-                       "on_success_callback": kwargs.get("on_success_callback", post_status_info)})
+        kwargs.update({"on_success_callback": kwargs.get("on_success_callback", task_on_success),
+                       "on_failure_callback": kwargs.get("on_failure_callback", task_on_failure),
+                       "on_retry_callback":   kwargs.get("on_retry_callback",   task_on_retry)})
 
         super(CWLJobDispatcher, self).__init__(task_id=task_id, *args, **kwargs)
 
@@ -100,6 +101,9 @@ class CWLJobDispatcher(BaseOperator):
         return None
 
     def execute(self, context):
+
+        post_status(context)
+
         _json = {}
 
         if 'job' in context['dag_run'].conf:
