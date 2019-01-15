@@ -13,7 +13,7 @@
 
 ### Posting progress, task status and DagRun results
 
-Progress, task status and DagRun results are posted to the different rountes that are defined in
+Progress, task status and DagRun results are posted to the different routes that are defined in
  `./utils/notifier.py` as
 ```
 ROUTES = {
