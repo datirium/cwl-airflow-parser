@@ -42,16 +42,20 @@ def stop_tasks(dr):
     logger.debug(f"""Stop tasks for {dr.dag_id} - {dr.run_id}""")
     for ti in dr.get_task_instances():
         logger.debug(f"""process {ti.dag_id} - {ti.task_id} - {ti.execution_date} - {ti.pid}""")
-        try:
-            process = psutil.Process(ti.pid) if ti.pid else None
-        except Exception:
-            logger.debug(f" - cannot find process by PID {ti.pid}")
-            process = None
-        ti.set_state(State.FAILED)
-        logger.debug(" - set state to FAILED")
-        if process:
-            logger.debug(f" - wait for process {ti.pid} to exit")
-            process.wait(timeout=TIMEOUT * 2)  # raises psutil.TimeoutExpired if timeout. Makes task fail -> DagRun fails
+        if ti.state == State.RUNNING:
+            try:
+                process = psutil.Process(ti.pid) if ti.pid else None
+            except Exception:
+                logger.debug(f" - cannot find process by PID {ti.pid}")
+                process = None
+            ti.set_state(State.FAILED)
+            logger.debug(" - set state to FAILED")
+            if process:
+                logger.debug(f" - wait for process {ti.pid} to exit")
+                try:
+                    process.wait(timeout=TIMEOUT * 2)  # raises psutil.TimeoutExpired if timeout. Makes task fail -> DagRun fails
+                except psutil.TimeoutExpired as e:
+                    logger.debug(f" - Done waiting for process {ti.pid} to die")
 
 
 def clean_dag_run(**context):
