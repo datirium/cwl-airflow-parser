@@ -66,7 +66,7 @@ ROUTES = {
    ```yaml
    {
      "payload": {
-       "title":           # DagRun state. One of ["success", "running", "failed"]
+       "state":           # DagRun state. One of ["success", "running", "failed"]
        "dag_id":          # string                                   
        "run_id":          # string
        "progress":        # int from 0 to 100 percent               
@@ -78,7 +78,7 @@ ROUTES = {
    ```yaml
    {
      "payload": {
-       "title":           # Task state. One of ["success", "running", "failed", "up_for_retry", "upstream_failed"]
+       "state":           # Task state. One of ["success", "running", "failed", "up_for_retry", "upstream_failed"]
        "dag_id":          # string                                   
        "run_id":          # string
        "task_id":         # string               
