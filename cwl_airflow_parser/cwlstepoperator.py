@@ -44,7 +44,8 @@ from cwltool.mutation import MutationManager
 from airflow.models import BaseOperator
 from airflow.utils.decorators import apply_defaults
 
-from .cwlutils import flatten, shortname, post_status_info, load_cwl
+from .cwlutils import flatten, shortname, load_cwl
+from cwl_airflow_parser.utils.notifier import task_on_success, task_on_failure, task_on_retry, post_status
 
 from airflow.utils.log.logging_mixin import StreamLogWriter
 
@@ -72,9 +73,9 @@ class CWLStepOperator(BaseOperator):
         self.outdir = None
         self.reader_task_id = None
 
-        kwargs.update({"on_failure_callback": kwargs.get("on_failure_callback", post_status_info),
-                       "on_retry_callback":   kwargs.get("on_retry_callback", post_status_info),
-                       "on_success_callback": kwargs.get("on_success_callback", post_status_info)})
+        kwargs.update({"on_success_callback": kwargs.get("on_success_callback", task_on_success),
+                       "on_failure_callback": kwargs.get("on_failure_callback", task_on_failure),
+                       "on_retry_callback":   kwargs.get("on_retry_callback",   task_on_retry)})
 
         super(self.__class__, self).__init__(task_id=task_id, *args, **kwargs)
 
@@ -85,6 +86,8 @@ class CWLStepOperator(BaseOperator):
 
 
     def execute(self, context):
+
+        post_status(context)
 
         self.cwlwf, it_is_workflow = load_cwl(self.dag.default_args["cwl_workflow"], self.dag.default_args)
         self.cwl_step = [step for step in self.cwlwf.steps if self.task_id == step.id.split("#")[-1]][0] if it_is_workflow else self.cwlwf
@@ -182,7 +185,7 @@ class CWLStepOperator(BaseOperator):
         _d_args['tmp_outdir_prefix'] = os.path.join(_d_args['outdir'], 'cwl_outdir_')
 
         _d_args["record_container_id"] = True
-        _d_args["cidfile_dir"] = self.outdir
+        _d_args["cidfile_dir"] = _d_args['outdir']
         _d_args["cidfile_prefix"] = self.task_id
 
         _logger.debug(
@@ -235,7 +238,7 @@ class CWLStepOperator(BaseOperator):
 
     def on_kill(self):
         _logger.info("Stop docker containers")
-        for cidfile in glob.glob(os.path.join(self.outdir, self.task_id + "*.cid")):
+        for cidfile in glob.glob(os.path.join(self.dag.default_args["cidfile_dir"], self.task_id + "*.cid")):  # make this better, doesn't look good to read from self.dag.default_args
             try:
                 with open(cidfile, "r") as inp_stream:
                     _logger.debug(f"""Read container id from {cidfile}""")
