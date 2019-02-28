@@ -42,7 +42,7 @@ def post_progress(context, from_task=False):
         dag_run = context["dag_run"]
         len_tis = len(dag_run.get_task_instances())
         len_tis_success = len(dag_run.get_task_instances(state=State.SUCCESS)) + int(from_task)
-        data = sign_with_jwt(data={"title":    dag_run.state,
+        data = sign_with_jwt(data={"state":    dag_run.state,
                                    "dag_id":   dag_run.dag_id,
                                    "run_id":   dag_run.run_id,
                                    "progress": int(len_tis_success / len_tis * 100),
@@ -71,7 +71,7 @@ def post_status(context):
         http_hook, session, url = prepare_connection(CONN_ID, ROUTES["status"])
         dag_run = context["dag_run"]
         ti = context["ti"]
-        data = sign_with_jwt(data={"title":    ti.state,
+        data = sign_with_jwt(data={"state":    ti.state,
                                    "dag_id":   dag_run.dag_id,
                                    "run_id":   dag_run.run_id,
                                    "task_id":  ti.task_id})
