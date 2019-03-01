@@ -55,33 +55,29 @@ def shortname(n):
     return n.split("#")[-1]
 
 
-def load_tool(argsworkflow,  # type: Union[Text, Dict[Text, Any]]
-              makeTool,  # type: Callable[..., Process]
-              kwargs=None,  # type: Dict
-              enable_dev=False,  # type: bool
-              strict=False,  # type: bool
-              resolver=None,  # type: Callable[[Loader, Union[Text, Dict[Text, Any]]], Text]
-              fetcher_constructor=None,  # type: FetcherConstructorType
-              overrides=None
-              ):
-    # type: (...) -> Process
-    uri, tool_file_uri = resolve_tool_uri(argsworkflow,
-                                          resolver=resolver,
-                                          fetcher_constructor=fetcher_constructor)
+def load_tool(argsworkflow,              # type: Union[Text, Dict[Text, Any]]
+              loadingContext             # type: LoadingContext
+             ):  # type: (...) -> Process
 
-    document_loader, workflowobj, uri = fetch_document(uri, resolver=resolver,
-                                                       fetcher_constructor=fetcher_constructor)
+    document_loader, workflowobj, uri = fetch_document(
+        argsworkflow,
+        resolver=loadingContext.resolver,
+        fetcher_constructor=loadingContext.fetcher_constructor)
 
-    document_loader, avsc_names, processobj, metadata, uri \
-        = validate_document(document_loader, workflowobj, uri,
-                            enable_dev=enable_dev,
-                            strict=strict,
-                            fetcher_constructor=fetcher_constructor,
-                            overrides=overrides,
-                            skip_schemas=kwargs.get('skip_schemas', True) if kwargs else True,
-                            metadata=kwargs.get('metadata', None) if kwargs else None)
-    return make_tool(document_loader, avsc_names, metadata, uri,
-                     LoadingContext())
+    document_loader, avsc_names, _, metadata, uri = validate_document(
+        document_loader, workflowobj, uri,
+        enable_dev=loadingContext.enable_dev,
+        strict=loadingContext.strict,
+        fetcher_constructor=loadingContext.fetcher_constructor,
+        overrides=loadingContext.overrides_list,
+        skip_schemas = True,
+        metadata=loadingContext.metadata)
+
+    return make_tool(document_loader,
+                     avsc_names,
+                     metadata,
+                     uri,
+                     loadingContext)
 
 
 def load_cwl(cwl_file, default_args):
@@ -89,6 +85,6 @@ def load_cwl(cwl_file, default_args):
     loading_context = LoadingContext(default_args)
     loading_context.construct_tool_object = default_make_tool
     loading_context.resolver = tool_resolver
-    tool = load.load_tool(cwl_file, loading_context)
+    tool = load_tool(cwl_file, loading_context)
     it_is_workflow = tool.tool["class"] == "Workflow"
     return tool, it_is_workflow
