@@ -252,8 +252,8 @@ class CWLStepOperator(BaseOperator):
             except Exception as ex:
                 _logger.error(f"""Failed to stop docker container with ID from {cidfile}\n {ex}""")
 
-        _logger.info(f"""Delete temporary output directory {self.outdir}""")
-        try:
-            shutil.rmtree(self.outdir)
-        except Exception as ex:
-            _logger.error(f"""Failed to delete temporary output directory {self.outdir}\n {ex}""")
+        # _logger.info(f"""Delete temporary output directory {self.outdir}""")
+        # try:
+        #     shutil.rmtree(self.outdir)
+        # except Exception as ex:
+        #     _logger.error(f"""Failed to delete temporary output directory {self.outdir}\n {ex}""")
