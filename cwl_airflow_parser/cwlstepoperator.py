@@ -72,6 +72,8 @@ class CWLStepOperator(BaseOperator):
 
         self.outdir = None
         self.reader_task_id = None
+        self.cwlwf = None
+        self.cwl_step = None
 
         kwargs.update({"on_success_callback": kwargs.get("on_success_callback", task_on_success),
                        "on_failure_callback": kwargs.get("on_failure_callback", task_on_failure),
@@ -83,7 +85,6 @@ class CWLStepOperator(BaseOperator):
 
         if ui_color:
             self.ui_color = ui_color
-
 
     def execute(self, context):
 
@@ -234,7 +235,6 @@ class CWLStepOperator(BaseOperator):
             '{0}: Output: \n {1}'.format(self.task_id, json.dumps(data, indent=4)))
 
         return data
-
 
     def on_kill(self):
         _logger.info("Stop docker containers")

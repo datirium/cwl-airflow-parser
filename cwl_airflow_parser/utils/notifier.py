@@ -57,9 +57,12 @@ def post_results(context):
     try:
         http_hook, session, url = prepare_connection(CONN_ID, ROUTES["results"])
         dag_run = context["dag_run"]
+        results = ""
+        if context["ti"].xcom_pull(task_ids="CWLJobGatherer") and len(context["ti"].xcom_pull(task_ids="CWLJobGatherer")) > 0:
+            results = context["ti"].xcom_pull(task_ids="CWLJobGatherer")[0]
         data = sign_with_jwt(data={"dag_id":  dag_run.dag_id,
                                    "run_id":  dag_run.run_id,
-                                   "results": context["ti"].xcom_pull(task_ids="CWLJobGatherer")[0]})
+                                   "results": results})
         prepped_request = session.prepare_request(requests.Request("POST", url, json={"payload": data}))
         http_hook.run_and_check(session, prepped_request, {})
     except Exception as e:
