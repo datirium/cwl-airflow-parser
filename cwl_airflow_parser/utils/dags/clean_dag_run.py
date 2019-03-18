@@ -63,9 +63,9 @@ def remove_tmp_data(dr):
     logger.debug(f"""Remove tmp data for {dr.dag_id} - {dr.run_id}""")
     tmp_folder_set = set()
     for ti in dr.get_task_instances():
-        for xcom_data in ti.xcom_pull(task_ids=ti.task_id):
-            if "outdir" in xcom_data:
-                tmp_folder_set.add(xcom_data["outdir"])
+        ti_xcom_data = ti.xcom_pull(task_ids=ti.task_id) # can be None
+        if ti_xcom_data and "outdir" in ti_xcom_data:
+            tmp_folder_set.add(ti_xcom_data["outdir"])
     for tmp_folder in tmp_folder_set:
         try:
             shutil.rmtree(tmp_folder)
@@ -80,8 +80,9 @@ def clean_dag_run(**context):
     dr_list = DagRun.find(dag_id=dag_id, run_id=run_id)
     for dr in dr_list:
         stop_tasks(dr)
-        clean_db(dr)
         remove_tmp_data(dr)
+        clean_db(dr)
+        
 
 
 dag = DAG(dag_id="clean_dag_run",
