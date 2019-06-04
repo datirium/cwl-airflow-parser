@@ -2,7 +2,7 @@ import logging
 import psutil
 import shutil
 from airflow import configuration
-from airflow.models import DAG, DagRun, DagStat, TaskInstance
+from airflow.models import DAG, DagRun, TaskInstance
 from airflow.operators.python_operator import PythonOperator
 from airflow.utils.dates import days_ago
 from airflow.utils.db import provide_session
@@ -35,8 +35,6 @@ def clean_db(dr, session=None):
     ).delete(synchronize_session='fetch')
     session.commit()
     logger.debug(" - clean dag_run table")
-    DagStat.update(dr.dag_id, dirty_only=False, session=session)
-    logger.debug(" - update dag_stats table")
 
 
 def stop_tasks(dr):
