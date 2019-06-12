@@ -1,7 +1,8 @@
 import logging
 import psutil
+import shutil
 from airflow import configuration
-from airflow.models import DAG, DagRun, DagStat, TaskInstance
+from airflow.models import DAG, DagRun, TaskInstance
 from airflow.operators.python_operator import PythonOperator
 from airflow.utils.dates import days_ago
 from airflow.utils.db import provide_session
@@ -34,8 +35,6 @@ def clean_db(dr, session=None):
     ).delete(synchronize_session='fetch')
     session.commit()
     logger.debug(" - clean dag_run table")
-    DagStat.update(dr.dag_id, dirty_only=False, session=session)
-    logger.debug(" - update dag_stats table")
 
 
 def stop_tasks(dr):
@@ -58,13 +57,30 @@ def stop_tasks(dr):
                     logger.debug(f" - Done waiting for process {ti.pid} to die")
 
 
+def remove_tmp_data(dr):
+    logger.debug(f"""Remove tmp data for {dr.dag_id} - {dr.run_id}""")
+    tmp_folder_set = set()
+    for ti in dr.get_task_instances():
+        ti_xcom_data = ti.xcom_pull(task_ids=ti.task_id) # can be None
+        if ti_xcom_data and "outdir" in ti_xcom_data:
+            tmp_folder_set.add(ti_xcom_data["outdir"])
+    for tmp_folder in tmp_folder_set:
+        try:
+            shutil.rmtree(tmp_folder)
+            logger.debug(f"""Successfully removed {tmp_folder}""")
+        except Exception as ex:
+            logger.error(f"""Failed to delete temporary output directory {tmp_folder}\n {ex}""")
+
+
 def clean_dag_run(**context):
     dag_id = context['dag_run'].conf['remove_dag_id']
     run_id = context['dag_run'].conf['remove_run_id']
     dr_list = DagRun.find(dag_id=dag_id, run_id=run_id)
     for dr in dr_list:
         stop_tasks(dr)
+        remove_tmp_data(dr)
         clean_db(dr)
+        
 
 
 dag = DAG(dag_id="clean_dag_run",
